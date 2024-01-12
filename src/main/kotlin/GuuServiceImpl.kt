@@ -5,15 +5,13 @@ import com.google.gson.JsonArray
 import kotlinx.serialization.json.Json
 import org.http4k.core.*
 import org.jsoup.Jsoup
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class GuuServiceImpl(private val client: HttpHandler) : GuuService {
     override fun fetchGroup(cookie: String): String? {
         val request = Request(method = Method.GET, uri = GuuLinks.STUDENT)
-            .header("Accept", GuuLinks.ACCEPT_HEADER)
-            .header("User-Agent", GuuLinks.USER_AGENT_HEADER)
-            .header("Connection", "keep-alive")
-            .header("Accept-Encoding", "gzip, deflate, br")
-            .header("Cookie", cookie)
+            .applyHeaders(cookie)
         val response = client(request)
         val group = parseGroup(response.body.toString())
         return group
@@ -21,13 +19,12 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
 
     override fun fetchClasses(cookie: String): List<ClassObject> {
         val request = Request(method = Method.GET, uri = GuuLinks.CLASSES)
-            .header("Accept", GuuLinks.ACCEPT_HEADER)
-            .header("User-Agent", GuuLinks.USER_AGENT_HEADER)
-            .header("Connection", "keep-alive")
-            .header("Accept-Encoding", "gzip, deflate, br")
-            .header("Cookie", cookie)
+            .applyHeaders(cookie)
         val response = client(request)
-        return parseClasses(response.body.toString()).sortedBy { it.start }
+        return parseClasses(response.body.toString()).sortedBy {
+            val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+            LocalDateTime.parse(it.start, format)
+        }
     }
 
     private fun parseGroup(studentPage: String): String? {
@@ -54,7 +51,6 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
 
                 return classDTOs.map {
                     val classDescription = parseDescription(it.description)
-                    println(classDescription)
                     it.toClassObject(classDescription)
                 }
             }

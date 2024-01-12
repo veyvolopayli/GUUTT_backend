@@ -1,5 +1,7 @@
 package org.example
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -25,22 +27,33 @@ fun main() {
 
     val api = routes(
         "classes" bind Method.GET to { r: Request ->
-            r.header("g")?.let { group ->
-                // todo SELECT DATA FROM DB
-                Response(OK).body("LIST")
+            r.query("g")?.let { group ->
+                when (val dbResponse = ClassesTable.fetchClasses(group)) {
+                    is DbResponse.Success -> Response(OK).body(Json.encodeToString(dbResponse.data)).withHeaders()
+                    is DbResponse.Error -> Response(CONFLICT).body(dbResponse.message).withHeaders()
+                }
             } ?: Response(BAD_REQUEST).body("Group required")
         },
         "authorize" bind Method.GET to { r: Request ->
             r.header("c")?.let { cookie ->
-                // todo REQUEST TO GUU. FETCH GROUP AND CLASSES. SAVE TO DB
                 val group = guuService.fetchGroup(cookie = cookie) ?: return@let Response(CONFLICT).body("GUU server side error...")
-
                 val classes = guuService.fetchClasses(cookie = cookie)
+                ClassesTable.insertClasses(studentGroup = group, classObjects = classes) ?: return@let Response(CONFLICT).body("База калла")
 
-                val isInserted = ClassesTable.insertClasses(studentGroup = group, classObjects = classes) ?: return@let Response(CONFLICT).body("База калла")
-
-                Response(OK).body(isInserted.toString())
+                Response(OK).body(Json.encodeToString(classes))
             } ?: Response(BAD_REQUEST).body("Cookie required")
+        },
+        "groups" bind Method.GET to {
+            when(val savedGroups = ClassesTable.getSavedGroups()) {
+                is DbResponse.Success -> {
+                    val data = savedGroups.data
+                    Response(OK).body(data.toString()).withHeaders()
+                }
+                is DbResponse.Error -> {
+                    val error = savedGroups.message
+                    Response(CONFLICT).body(error).withHeaders()
+                }
+            }
         }
     )
 

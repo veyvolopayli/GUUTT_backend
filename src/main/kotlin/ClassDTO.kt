@@ -1,8 +1,6 @@
 package org.example
 
 import kotlinx.serialization.Serializable
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 @Serializable
 data class ClassDTO(
@@ -14,16 +12,12 @@ data class ClassDTO(
     val description: String
 ) {
     fun toClassObject(description: ClassDescription): ClassObject {
-        val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        val startDate = LocalDateTime.parse(this.start, format)
-        val endDate = LocalDateTime.parse(this.end, format)
-
         return ClassObject(
             id = this.id,
             title = this.title,
             color = this.color,
-            start = startDate,
-            end = endDate,
+            start = this.start,
+            end = this.end,
             description = description
         )
     }

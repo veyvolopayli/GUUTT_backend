@@ -2,6 +2,8 @@ package org.example
 
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
 object ClassesTable : Table("classes") {
@@ -24,8 +26,8 @@ object ClassesTable : Table("classes") {
                     this[ClassesTable.id] = it.id
                     this[title] = it.title
                     this[color] = it.color
-                    this[start] = it.start.toString()
-                    this[end] = it.end.toString()
+                    this[start] = it.start
+                    this[end] = it.end
                     this[building] = it.description.building
                     this[classroom] = it.description.classroom
                     this[event] = it.description.event
@@ -37,6 +39,48 @@ object ClassesTable : Table("classes") {
         } catch (e: Exception) {
             println(e.message)
             null
+        }
+    }
+
+    fun fetchClasses(group: String): DbResponse<Map<String, List<ClassObject>>> {
+        try {
+            return transaction {
+                val classes = selectAll().where {
+                    ClassesTable.group eq group.trim()
+                }.map {
+                    ClassObject(
+                        id = it[ClassesTable.id],
+                        title = it[title],
+                        color = it[color],
+                        start = it[start],
+                        end = it[end],
+                        description = ClassDescription(
+                            building = it[building],
+                            classroom = it[classroom],
+                            event = it[event],
+                            professor = it[professor],
+                            department = it[department]
+                        )
+                    )
+                }
+                DbResponse.Success(data = classes.groupBy {
+                    it.start.dropLast(9)
+                })
+            }
+        } catch (e: Exception) {
+            return DbResponse.Error(e.message ?: "Unexpected error")
+        }
+    }
+
+    fun getSavedGroups(): DbResponse<List<String>> {
+        return try {
+            transaction {
+                val groups = select(group).withDistinct().map { it[group] }
+                DbResponse.Success(data = groups)
+            }
+        } catch (e: Exception) {
+            println(e.message)
+            DbResponse.Error(e.message ?: "Unexpected error")
         }
     }
 }
