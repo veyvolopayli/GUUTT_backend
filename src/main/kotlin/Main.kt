@@ -29,7 +29,7 @@ fun main() {
         "classes" bind Method.GET to { r: Request ->
             r.query("g")?.let { group ->
                 when (val dbResponse = ClassesTable.fetchClasses(group)) {
-                    is DbResponse.Success -> Response(OK).body(Json.encodeToString(dbResponse.data)).withHeaders()
+                    is DbResponse.Success -> Response(OK).body(Json.encodeToString(dbResponse.data.fillDatesGaps())).withHeaders()
                     is DbResponse.Error -> Response(CONFLICT).body(dbResponse.message).withHeaders()
                 }
             } ?: Response(BAD_REQUEST).body("Group required")
@@ -47,7 +47,7 @@ fun main() {
             when(val savedGroups = ClassesTable.getSavedGroups()) {
                 is DbResponse.Success -> {
                     val data = savedGroups.data
-                    Response(OK).body(data.toString()).withHeaders()
+                    Response(OK).body(Json.encodeToString(data)).withHeaders()
                 }
                 is DbResponse.Error -> {
                     val error = savedGroups.message
