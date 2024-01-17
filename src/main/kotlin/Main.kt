@@ -1,5 +1,6 @@
 package org.example
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.http4k.client.ApacheClient
@@ -11,7 +12,7 @@ import org.http4k.core.Status.Companion.CONFLICT
 import org.http4k.core.Status.Companion.OK
 import org.http4k.routing.bind
 import org.http4k.routing.routes
-import org.http4k.server.Undertow
+import org.http4k.server.Jetty
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
 
@@ -57,5 +58,7 @@ fun main() {
         }
     )
 
-    api.asServer(Undertow(9000)).start()
+    api.asServer(Jetty(9000)).start()
+
+    println("SERVER STARTED")
 }
