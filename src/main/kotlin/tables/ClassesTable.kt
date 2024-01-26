@@ -1,8 +1,10 @@
-package org.example
+package org.example.tables
 
+import org.example.ClassDescription
+import org.example.ClassObject
+import org.example.DbResponse
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.batchInsert
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -22,7 +24,7 @@ object ClassesTable : Table("classes") {
     fun insertClasses(studentGroup: String, classObjects: List<ClassObject>): Int? {
         return try {
             transaction {
-                batchInsert(classObjects) {
+                batchInsert(classObjects, true) {
                     this[ClassesTable.id] = it.id
                     this[title] = it.title
                     this[color] = it.color

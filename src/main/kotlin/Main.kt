@@ -1,8 +1,10 @@
 package org.example
 
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.example.tables.ClassesTable
+import org.example.tables.NewsTable
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -39,9 +41,20 @@ fun main() {
             r.header("c")?.let { cookie ->
                 val group = guuService.fetchGroup(cookie = cookie) ?: return@let Response(CONFLICT).body("GUU server side error...")
                 val classes = guuService.fetchClasses(cookie = cookie)
-                ClassesTable.insertClasses(studentGroup = group, classObjects = classes) ?: return@let Response(CONFLICT).body("База калла")
 
-                Response(OK).body(Json.encodeToString(classes))
+                ClassesTable.insertClasses(studentGroup = group, classObjects = classes)?.let {
+                    Response(OK)
+                } ?: return@let Response(CONFLICT).body("База калла")
+
+                /*when(val dbResponse = ClassesTable.fetchClasses(group)) {
+                    is DbResponse.Success -> {
+                        Response(OK).body(Json.encodeToString(dbResponse.data))
+                    }
+                    is DbResponse.Error -> {
+                        Response(CONFLICT).body("Произошла ошибка при получении введенных данных")
+                    }
+                }*/
+
             } ?: Response(BAD_REQUEST).body("Cookie required")
         },
         "groups" bind Method.GET to {
@@ -55,10 +68,26 @@ fun main() {
                     Response(CONFLICT).body(error).withHeaders()
                 }
             }
+        },
+        "news" bind Method.GET to { _: Request ->
+            when(val newsResponse = NewsTable.fetchAllNews()) {
+                is DbResponse.Success -> {
+                    Response(OK).body(Json.encodeToString(newsResponse.data)).withHeaders()
+                }
+                is DbResponse.Error -> {
+                    Response(CONFLICT).body(newsResponse.message).withHeaders()
+                }
+            }
         }
     )
 
     api.asServer(Jetty(9000)).start()
 
     println("SERVER STARTED")
+
+    runBlocking {
+        startRepeatableTimerTask(180) {
+            guuService.fetchNews()
+        }
+    }
 }

@@ -1,10 +1,13 @@
 package org.example
 
-import com.google.gson.Gson
-import com.google.gson.JsonArray
 import kotlinx.serialization.json.Json
-import org.http4k.core.*
+import org.example.tables.NewsTable
+import org.http4k.core.HttpHandler
+import org.http4k.core.Method
+import org.http4k.core.Request
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.select.Elements
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -25,6 +28,40 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
             val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
             LocalDateTime.parse(it.start, format)
         }
+    }
+
+    override fun fetchNews(): List<News> {
+        return try {
+            val newsPages = 10
+            val newsList = mutableListOf<News>()
+            for (page in 1..newsPages) {
+                val document: Document = Jsoup.connect("https://guu.ru/category/news_ru/page/$page/").get()
+                val news = parseNews(document)
+                newsList.addAll(news)
+            }
+            NewsTable.insertNews(newsList)
+            newsList
+        } catch (e: Exception) {
+            println(e.message)
+            return emptyList()
+        }
+    }
+
+    private fun parseNews(document: Document): List<News> {
+        val imageElements = document.getElementsByClass("img-holder thumbnail pull-left")
+        val elements = document.getElementsByClass("post cf")
+        val news = elements.mapIndexed { i, element ->
+            val imageUrl = imageElements[i].select("img").first()?.absUrl("src").toString()
+            val title = element.select("h3").first()?.text().toString()
+            val description = element.select("p").eachText().joinToString("\n")
+            val date = element.select("small").find {
+                !it.text().toString().contains("Анонсы") && !it.text().toString().contains("Новости")
+            }?.text().toString()
+            val href = element.select("a").first()?.attr("href").toString()
+            News(imageUrl, title, description,  date, href)
+        }
+
+        return news
     }
 
     private fun parseGroup(studentPage: String): String? {
