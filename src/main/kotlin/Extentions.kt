@@ -1,15 +1,23 @@
 package org.example
 
-fun org.http4k.core.Request.applyHeaders(cookie: String): org.http4k.core.Request {
+import org.http4k.core.cookie.cookie
+
+fun org.http4k.core.Request.applyHeaders(contentType: String): org.http4k.core.Request {
     return this.header("Accept", Headers.ACCEPT_HEADER)
         .header("User-Agent", Headers.USER_AGENT_HEADER)
         .header("Connection", "keep-alive")
         .header("Accept-Encoding", "gzip, deflate, br")
-        .header("Cookie", cookie)
+        .header("Content-Type", contentType)
 }
 
 fun org.http4k.core.Response.withHeaders(): org.http4k.core.Response {
     return this.header("Content-Type", "application/json; charset=utf-8")
+}
+
+fun org.http4k.core.Request.applyAuthCookies(cookies: List<org.http4k.core.cookie.Cookie>): org.http4k.core.Request {
+    return cookies.fold(this) { request, cookie ->
+        request.cookie(cookie)
+    }
 }
 
 fun Map<String, List<ClassObject>>.fillDatesGaps(): Map<String, List<ClassObject>> {
