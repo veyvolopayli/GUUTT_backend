@@ -1,6 +1,7 @@
 package org.example
 
 import org.http4k.core.cookie.cookie
+import org.http4k.core.cookie.cookies
 
 fun org.http4k.core.Request.applyHeaders(contentType: String): org.http4k.core.Request {
     return this.header("Accept", Headers.ACCEPT_HEADER)
@@ -8,6 +9,22 @@ fun org.http4k.core.Request.applyHeaders(contentType: String): org.http4k.core.R
         .header("Connection", "keep-alive")
         .header("Accept-Encoding", "gzip, deflate, br")
         .header("Content-Type", contentType)
+}
+
+fun org.http4k.core.Request.cookieString(value: String): org.http4k.core.Request {
+    return this.header("Cookie", value)
+}
+
+fun org.http4k.core.Response.cookiesString(): String {
+    return this.cookies().joinToString(";") {
+        "${it.name}=${it.value}"
+    }
+}
+
+fun List<org.http4k.core.cookie.Cookie>.stringify(): String {
+    return joinToString(";") {
+        "${it.name}=${it.value}"
+    }
 }
 
 fun org.http4k.core.Response.withHeaders(): org.http4k.core.Response {
