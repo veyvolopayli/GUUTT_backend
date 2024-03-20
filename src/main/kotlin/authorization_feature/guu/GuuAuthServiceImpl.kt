@@ -3,32 +3,41 @@ package org.example.authorization_feature.guu
 import authorization_feature.model.SiteLogin
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.sourceforge.tess4j.Tesseract
 import org.example.*
 import org.example.authorization_feature.model.SimpleAuthDto
+import org.example.tesseract.CaptchaServiceImpl
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.cookie.Cookie
 import org.http4k.core.cookie.cookies
 import java.io.File
-import java.time.Instant
 import kotlin.random.Random
 import kotlin.random.nextInt
 
-class GuuAuthServiceImpl : GuuAuthService, GuuCaptchaServiceImpl() {
+class GuuAuthServiceImpl(tesseract: Tesseract) : GuuAuthService, CaptchaServiceImpl(tesseract) {
 
-    private fun downloadCaptcha(fileName: String): List<Cookie> {
-        val request = Request(Method.GET, GuuLinks.CAPTCHA).applyHeaders("image/png")
-        val response = ApacheClient().invoke(request)
-        val stream = response.body.stream
-        val cookies = response.cookies()
+    private fun downloadCaptcha(fileName: String, data: (captchaFile: File, cookies: List<Cookie>) -> Unit) {
+        try {
+            val request = Request(Method.GET, GuuLinks.CAPTCHA).applyHeaders("image/png")
+            val response = ApacheClient().invoke(request)
+            val stream = response.body.stream
+            val cookies = response.cookies()
 
-        File("py/$fileName").apply {
-            createNewFile()
-            writeBytes(stream.readAllBytes())
+            val imagesDir = File(captchaTempStorageDir)
+            imagesDir.mkdirs()
+
+            val file = File(imagesDir, fileName).apply {
+                createNewFile()
+                writeBytes(stream.readAllBytes())
+            }
+
+            data.invoke(file, cookies)
+        } catch (e: Exception) {
+            println("КУКИ ПУСТЫЕ")
+            println(e.stackTrace)
         }
-
-        return cookies
     }
 
     private fun authorize(login: String, password: String, captcha: String, cookies: String): AuthResult {
@@ -65,48 +74,40 @@ class GuuAuthServiceImpl : GuuAuthService, GuuCaptchaServiceImpl() {
                     AuthResult.UnexpectedError
                 }
             }
+
             302 -> {
                 // Captcha and login/password are correct
                 // We can use these cookies to access to all pages that need an authorization
                 AuthResult.Success(response.cookies())
             }
+
             else -> {
                 AuthResult.UnknownResponseCode(response.status.code)
             }
         }
     }
 
-    private fun generateCaptchaName() = "img_${Random.nextInt(0..Int.MAX_VALUE)}.png"
+    private fun generateCaptchaName() = "img-${Random.nextInt(0..Int.MAX_VALUE)}.png"
 
     override fun procesAuth(login: String, password: String): AuthResult {
-        val captchaName = generateCaptchaName()
 
         var authResult: AuthResult = AuthResult.WrongCaptcha
 
         while (authResult is AuthResult.WrongCaptcha) {
-            val cookies = downloadCaptcha(captchaName)
-            val captcha = solveCaptcha(captchaName)
-            authResult = authorize(
-                login = login,
-                password = password,
-                captcha = captcha,
-                cookies = cookies.stringify()
-            )
+            val captchaName = generateCaptchaName()
+            downloadCaptcha(captchaName) { captchaFile, cookies ->
+                val captcha = solveCaptcha(captchaFile)
+                authResult = authorize(
+                    login = login,
+                    password = password,
+                    captcha = captcha,
+                    cookies = cookies.stringify()
+                )
+            }
         }
 
         return authResult
     }
-}
-
-fun main() {
-    val authService = GuuAuthServiceImpl()
-
-    val result = authService.procesAuth(
-        login = System.getenv("GUU_LOGIN"),
-        password = System.getenv("GUU_PASSWORD")
-    )
-
-    println("ФИНАЛЬНЫЙ РЕЗУЛЬТАТ: ${result.cookies[0]}")
 }
 
 /*val classesRequest = Request(Method.GET, GuuLinks.CLASSES)
@@ -116,7 +117,6 @@ fun main() {
             val classesResponse = ApacheClient().invoke(classesRequest)
 
             println(classesResponse)*/
-
 
 
 /*val studentRequest = Request(Method.GET, "https://my.guu.ru/student")

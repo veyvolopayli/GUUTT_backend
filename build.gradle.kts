@@ -1,7 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-val exposedVersion: String by project
-
 plugins {
     kotlin("jvm") version "1.8.10"
     kotlin("plugin.serialization") version "1.9.22"
@@ -17,22 +15,26 @@ repositories {
 
 val sshAntTask = configurations.create("sshAntTask")
 
+val exposedVersion: String by project
+val http4kVersion: String by project
+
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    implementation(platform("org.http4k:http4k-bom:5.13.1.0"))
-    implementation("org.http4k:http4k-core")
-    implementation("org.http4k:http4k-server-undertow")
-    implementation("org.http4k:http4k-client-apache")
-    implementation("org.http4k:http4k-server-jetty")
+    runtimeOnly("org.http4k:http4k-bom:$http4kVersion")
+    implementation("org.http4k:http4k-core:$http4kVersion")
+    implementation("org.http4k:http4k-server-undertow:$http4kVersion")
+    implementation("org.http4k:http4k-client-apache:$http4kVersion")
+    implementation("org.http4k:http4k-server-jetty:$http4kVersion")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jsoup:jsoup:1.17.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
-    implementation("org.postgresql:postgresql:42.5.4")
+    implementation("org.postgresql:postgresql:42.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     sshAntTask("org.apache.ant:ant-jsch:1.10.12")
+    implementation("net.sourceforge.tess4j:tess4j:5.11.0")
 }
 
 tasks.withType<ShadowJar> {

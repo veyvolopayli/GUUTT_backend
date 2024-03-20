@@ -27,7 +27,7 @@ fun List<org.http4k.core.cookie.Cookie>.stringify(): String {
     }
 }
 
-fun org.http4k.core.Response.withHeaders(): org.http4k.core.Response {
+fun org.http4k.core.Response.specifyContentType(): org.http4k.core.Response {
     return this.header("Content-Type", "application/json; charset=utf-8")
 }
 
