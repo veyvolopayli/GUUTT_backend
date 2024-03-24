@@ -69,6 +69,13 @@ task("deploy") {
             val jarFileName = "GUUTT_backend-1.0.0-all.jar"
             try {
                 "scp"(
+                    "file" to file("src/main/kotlin/tesseract/tessdata/eng.traineddata"),
+                    "todir" to "$user@$host:/root/guutt/tessdata",
+                    "keyfile" to key,
+                    "trust" to true,
+                    "knownhosts" to knownHosts
+                )
+                "scp"(
                     "file" to file("build/libs/$jarFileName"),
                     "todir" to "$user@$host:/root/guutt",
                     "keyfile" to key,

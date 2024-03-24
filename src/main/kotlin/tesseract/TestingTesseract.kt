@@ -69,9 +69,3 @@ class TestingTesseract {
     }
 
 }
-
-fun main() {
-    val t = TestingTesseract()
-    t.downloadAndSolveCaptchaImages(30)
-//    t.renameTxtFiles()
-}

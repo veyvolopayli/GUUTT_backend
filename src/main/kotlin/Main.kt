@@ -30,7 +30,7 @@ fun main() {
     )
 
     val client = ApacheClient()
-    val tesseract = Tesseract().also { it.setDatapath("src/main/kotlin/tesseract/tessdata") }
+    val tesseract = Tesseract().also { it.setDatapath(tessdataDir) }
     val guuService = GuuServiceImpl(client)
     val guuAuthService = GuuAuthServiceImpl(tesseract)
 
@@ -104,28 +104,6 @@ fun main() {
                 }
                 else -> {
                     Response(status = CONFLICT).body("Пу пу пууу...")
-                }
-            }
-        },
-        "auth" bind Method.GET to { request ->
-//            val userAuthData = Json.decodeFromString<UserAuthData>(request.bodyString())
-            val authResult = guuAuthService.procesAuth(login = "userAuthData.login", password = "userAuthData.password")
-
-            when(authResult) {
-                is AuthResult.Success -> {
-                    Response(status = OK).body("Удачная авторизация! Куки: " + authResult.cookies.toString()).specifyContentType()
-                }
-                is AuthResult.WrongLoginOrPassword -> {
-                    Response(status = UNAUTHORIZED).body("Неверный логин или пароль.").specifyContentType()
-                }
-                is AuthResult.UnexpectedError -> {
-                    Response(status = CONFLICT).body("Непредвиденная ошибка").specifyContentType()
-                }
-                is AuthResult.UnknownResponseCode -> {
-                    Response(status = CONFLICT).body("Неожиданный код ответа: ${authResult.responseCode}").specifyContentType()
-                }
-                else -> {
-                    Response(status = CONFLICT).body("Пу пу пууу...").specifyContentType()
                 }
             }
         }
