@@ -85,4 +85,14 @@ object ClassesTable : Table("classes") {
             DbResponse.Error(e.message ?: "Unexpected error")
         }
     }
+
+    fun updateClasses(group: String, newClasses: List<ClassObject>): DbResponse<Unit> {
+        return try {
+            transaction {
+                DbResponse.Success(Unit)
+            }
+        } catch (e: Exception) {
+            DbResponse.Error("${e.message}")
+        }
+    }
 }

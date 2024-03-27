@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import net.sourceforge.tess4j.Tesseract
 import org.example.*
 import org.example.authorization_feature.model.SimpleAuthDto
+import org.example.authorization_feature.security.AesEncryption
 import org.example.tesseract.CaptchaServiceImpl
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
@@ -16,7 +17,7 @@ import java.io.File
 import kotlin.random.Random
 import kotlin.random.nextInt
 
-class GuuAuthServiceImpl(tesseract: Tesseract) : GuuAuthService, CaptchaServiceImpl(tesseract) {
+class GuuAuthServiceImpl(tesseract: Tesseract, aesEncryption: AesEncryption) : GuuAuthService, CaptchaServiceImpl(tesseract) {
 
     private fun downloadCaptcha(fileName: String, data: (captchaFile: File, cookies: List<Cookie>) -> Unit) {
         try {

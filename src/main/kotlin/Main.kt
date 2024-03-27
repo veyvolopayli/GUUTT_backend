@@ -6,8 +6,10 @@ import kotlinx.serialization.json.Json
 import net.sourceforge.tess4j.Tesseract
 import org.example.authorization_feature.guu.AuthResult
 import org.example.authorization_feature.guu.GuuAuthServiceImpl
+import org.example.authorization_feature.security.AesEncryption
 import org.example.tables.ClassesTable
 import org.example.tables.NewsTable
+import org.example.tables.UserDataTable
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -22,7 +24,7 @@ import org.http4k.server.Jetty
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
 
-fun main() {
+suspend fun main() {
 
     Database.connect(
         url = "jdbc:postgresql://5.181.255.253:5432/guutt", driver = "org.postgresql.Driver",
@@ -32,7 +34,11 @@ fun main() {
     val client = ApacheClient()
     val tesseract = Tesseract().also { it.setDatapath(tessdataDir) }
     val guuService = GuuServiceImpl(client)
-    val guuAuthService = GuuAuthServiceImpl(tesseract)
+    val aesEncryption = AesEncryption(
+        keyStorePath = System.getenv("KS_PATH"),
+        keyStorePassword = System.getenv("KS_PASS")
+    )
+    val guuAuthService = GuuAuthServiceImpl(tesseract, aesEncryption)
 
     val api = routes(
         "classes" bind Method.GET to { r: Request ->
@@ -113,9 +119,17 @@ fun main() {
 
     println("SERVER STARTED")
 
-    runBlocking {
-        startRepeatableTimerTask(180) {
-            guuService.fetchNews()
+    startRepeatableTimerTask(180) {
+        guuService.fetchNews()
+    }
+
+    startRepeatableTimerTask(1440) {
+        val groupsResult = UserDataTable.getAllGroups()
+        if (groupsResult is DbResponse.Success) {
+            groupsResult.data.toSet().forEach { group ->
+                val currentGroupClasses = ClassesTable.fetchClasses(group)
+
+            }
         }
     }
 }
