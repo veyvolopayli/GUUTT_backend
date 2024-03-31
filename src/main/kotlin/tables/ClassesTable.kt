@@ -3,39 +3,41 @@ package org.example.tables
 import org.example.ClassDescription
 import org.example.ClassObject
 import org.example.DbResponse
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.batchInsert
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 object ClassesTable : Table("classes") {
-    private val id = long("id")
-    private val title = varchar("title", 100)
-    private val color = varchar("color", 7)
-    private val start = varchar("start", 19)
-    private val end = varchar("end", 19)
-    private val building = varchar("building", 25)
-    private val classroom = varchar("classroom", 10)
-    private val event = varchar("event", 25)
-    private val professor = varchar("professor", 100)
-    private val department = varchar("department", 100)
-    private val group = varchar("group", 100)
+    private val idColumn = long("id")
+    private val titleColumn = varchar("title", 100)
+    private val colorColumn = varchar("color", 7)
+    private val startColumn = varchar("start", 19)
+    private val endColumn = varchar("end", 19)
+    private val buildingColumn = varchar("building", 25)
+    private val classroomColumn = varchar("classroom", 10)
+    private val eventColumn = varchar("event", 25)
+    private val professorColumn = varchar("professor", 100)
+    private val departmentColumn = varchar("department", 100)
+    private val groupColumn = varchar("group", 100)
 
     fun insertClasses(studentGroup: String, classObjects: List<ClassObject>): Int? {
         return try {
             transaction {
                 batchInsert(classObjects, true) {
-                    this[ClassesTable.id] = it.id
-                    this[title] = it.title
-                    this[color] = it.color
-                    this[start] = it.start
-                    this[end] = it.end
-                    this[building] = it.description.building
-                    this[classroom] = it.description.classroom
-                    this[event] = it.description.event
-                    this[professor] = it.description.professor
-                    this[department] = it.description.department
-                    this[group] = studentGroup
+                    this[idColumn] = it.id
+                    this[titleColumn] = it.title
+                    this[colorColumn] = it.color
+                    this[startColumn] = it.start
+                    this[endColumn] = it.end
+                    this[buildingColumn] = it.description.building
+                    this[classroomColumn] = it.description.classroom
+                    this[eventColumn] = it.description.event
+                    this[professorColumn] = it.description.professor
+                    this[departmentColumn] = it.description.department
+                    this[groupColumn] = studentGroup
                 }.count()
             }
         } catch (e: Exception) {
@@ -44,40 +46,48 @@ object ClassesTable : Table("classes") {
         }
     }
 
-    fun fetchClasses(group: String): DbResponse<Map<String, List<ClassObject>>> {
-        try {
-            return transaction {
-                val classes = selectAll().where {
-                    ClassesTable.group eq group.trim()
+    fun fetchGroupedClasses(group: String): DbResponse<Map<String, List<ClassObject>>> {
+        return try {
+            val classes = fetchClasses(group)
+            // Группировка по дате без времени. substringBefore('T'),
+            // так как формат времени yyyy-MM-dd'T'HH:mm:ss навряд ли изменится
+            DbResponse.Success(data = classes.groupBy { it.start.substringBefore('T') })
+        } catch (e: Exception) {
+            DbResponse.Error(e.message ?: "Unexpected error")
+        }
+    }
+
+    fun fetchClasses(group: String): List<ClassObject> {
+        return try {
+            transaction {
+                selectAll().where {
+                    groupColumn eq group.trim()
                 }.map {
                     ClassObject(
-                        id = it[ClassesTable.id],
-                        title = it[title],
-                        color = it[color],
-                        start = it[start],
-                        end = it[end],
+                        id = it[idColumn],
+                        title = it[titleColumn],
+                        color = it[colorColumn],
+                        start = it[startColumn],
+                        end = it[endColumn],
                         description = ClassDescription(
-                            building = it[building],
-                            classroom = it[classroom],
-                            event = it[event],
-                            professor = it[professor],
-                            department = it[department]
+                            building = it[buildingColumn],
+                            classroom = it[classroomColumn],
+                            event = it[eventColumn],
+                            professor = it[professorColumn],
+                            department = it[departmentColumn]
                         )
                     )
                 }
-                DbResponse.Success(data = classes.groupBy {
-                    it.start.dropLast(9)
-                })
             }
         } catch (e: Exception) {
-            return DbResponse.Error(e.message ?: "Unexpected error")
+            emptyList()
         }
     }
 
     fun getSavedGroups(): DbResponse<List<String>> {
         return try {
             transaction {
-                val groups = select(group).withDistinct().map { it[group] }
+                val groups = select(groupColumn).withDistinct().map { it[groupColumn] }
                 DbResponse.Success(data = groups)
             }
         } catch (e: Exception) {
@@ -86,13 +96,50 @@ object ClassesTable : Table("classes") {
         }
     }
 
-    fun updateClasses(group: String, newClasses: List<ClassObject>): DbResponse<Unit> {
+    fun updateClasses(group: String, semester: Pair<LocalDate, LocalDate>, newClasses: List<ClassObject>): DbResponse<Unit> {
         return try {
             transaction {
-                DbResponse.Success(Unit)
+                deleteWhere {
+                    (groupColumn eq group) and startColumn.between(
+                        semester.first.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
+                        semester.second.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
+                    )
+                }
             }
+            insertClasses(group, newClasses)
+            DbResponse.Success(Unit)
         } catch (e: Exception) {
             DbResponse.Error("${e.message}")
+        }
+    }
+
+    fun test(semester: Pair<LocalDate, LocalDate>): List<ClassObject> {
+        return try {
+            transaction {
+                selectAll().where {
+                    startColumn.between(
+                        semester.first.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
+                        semester.second.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
+                    )
+                }.map {
+                    ClassObject(
+                        id = it[idColumn],
+                        title = it[titleColumn],
+                        color = it[colorColumn],
+                        start = it[startColumn],
+                        end = it[endColumn],
+                        description = ClassDescription(
+                            building = it[buildingColumn],
+                            classroom = it[classroomColumn],
+                            event = it[eventColumn],
+                            professor = it[professorColumn],
+                            department = it[departmentColumn]
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }

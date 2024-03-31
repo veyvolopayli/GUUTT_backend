@@ -1,6 +1,5 @@
 package org.example
 
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.sourceforge.tess4j.Tesseract
@@ -43,7 +42,7 @@ suspend fun main() {
     val api = routes(
         "classes" bind Method.GET to { r: Request ->
             r.query("g")?.let { group ->
-                when (val dbResponse = ClassesTable.fetchClasses(group)) {
+                when (val dbResponse = ClassesTable.fetchGroupedClasses(group)) {
                     is DbResponse.Success -> Response(OK).body(Json.encodeToString(dbResponse.data.fillDatesGaps())).specifyContentType()
                     is DbResponse.Error -> Response(CONFLICT).body(dbResponse.message).specifyContentType()
                 }
@@ -127,7 +126,6 @@ suspend fun main() {
         val groupsResult = UserDataTable.getAllGroups()
         if (groupsResult is DbResponse.Success) {
             groupsResult.data.toSet().forEach { group ->
-                val currentGroupClasses = ClassesTable.fetchClasses(group)
 
             }
         }

@@ -4,6 +4,7 @@ import org.example.DbResponse
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 
 object UsersTable: Table("users") {
     private val loginColumn = varchar("login", 50).uniqueIndex()
@@ -57,6 +58,37 @@ object UsersTable: Table("users") {
             }
         } catch (e: Exception) {
             DbResponse.Error("${e.message}")
+        }
+    }
+
+    fun getAllAdminsCookies(): List<AdminCookies> {
+        return try {
+            transaction {
+                select(loginColumn, cookiesColumn).map {
+                    AdminCookies(
+                        login = it[loginColumn],
+                        cookies = it[cookiesColumn]
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    data class AdminCookies(val login: String, val cookies: String)
+
+    fun updateAdminCookies(login: String, newCookies: String): Boolean? {
+        return try {
+            transaction {
+                update({ loginColumn eq login }) {
+                    it[cookiesColumn] = newCookies
+                } == 1
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }
