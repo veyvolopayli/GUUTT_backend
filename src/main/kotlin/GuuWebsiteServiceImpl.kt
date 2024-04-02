@@ -2,16 +2,16 @@ package org.example
 
 import kotlinx.serialization.json.Json
 import org.example.tables.NewsTable
+import org.http4k.client.ApacheClient
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.select.Elements
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class GuuServiceImpl(private val client: HttpHandler) : GuuService {
+class GuuWebsiteServiceImpl(private val client: HttpHandler) : GuuWebsiteService {
     override fun fetchGroup(cookie: String): String? {
         val request = Request(method = Method.GET, uri = GuuLinks.STUDENT)
             .applyHeaders(cookie)
@@ -20,13 +20,32 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
         return group
     }
 
-    override fun fetchClasses(cookie: String): List<ClassObject> {
+    override fun fetchClasses(cookie: String): GuuResponse<List<ClassObject>> {
         val request = Request(method = Method.GET, uri = GuuLinks.CLASSES)
-            .applyHeaders(cookie)
+            .applyHeaders("text/html; charset=UTF-8")
+            .cookieString(cookie)
+        // if response code 302 - cookies isn't valid, else if 200 - all is good
         val response = client(request)
-        return parseClasses(response.body.toString()).sortedBy {
-            val format = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-            LocalDateTime.parse(it.start, format)
+        return when(response.status.code) {
+            200 -> {
+                val classes = parseClasses(response.bodyString())
+                val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                val sortedClasses = classes.sortedBy {
+                    LocalDateTime.parse(it.start, dateTimeFormat)
+                }
+                GuuResponse.Success(sortedClasses)
+                // all is ok
+            }
+            403 -> {
+                GuuResponse.Forbidden()
+            }
+            302 -> {
+                // cookie is bad
+                GuuResponse.CookieExpired()
+            }
+            else -> {
+                GuuResponse.NotResponding("${response.status.code}: ${response.status.description}")
+            }
         }
     }
 
@@ -44,6 +63,53 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
         } catch (e: Exception) {
             println(e.message)
             return emptyList()
+        }
+    }
+
+    override fun fetchFullName(cookie: String): GuuResponse<String> {
+        val request = Request(method = Method.GET, uri = GuuLinks.STUDENT)
+            .applyHeaders("text/html; charset=UTF-8")
+            .cookieString(cookie)
+        val response = ApacheClient().invoke(request)
+        return when(response.status.code) {
+            200 -> {
+                val doc = Jsoup.parse(response.bodyString())
+                val userFullName = doc.select("h3.widget-user-username").first()?.text() ?: ""
+                GuuResponse.Success(userFullName)
+            }
+            302 -> {
+                GuuResponse.CookieExpired()
+            }
+            403 -> {
+                GuuResponse.Forbidden()
+            }
+            else -> {
+                GuuResponse.NotResponding("${response.status.code} ${response.status.description}")
+            }
+        }
+    }
+
+    override fun getUserInfo(cookie: String): GuuResponse<UserInfo> {
+        val request = Request(Method.GET, GuuLinks.STUDENT)
+            .applyHeaders("text/html; charset=UTF-8")
+            .cookieString(cookie)
+        val response = ApacheClient().invoke(request)
+        return when(response.status.code) {
+            200 -> {
+                val doc = Jsoup.parse(response.bodyString())
+                val userFullName = doc.select("h3.widget-user-username").first()?.text() ?: ""
+                val userGroup = doc.select("h5.widget-user-desc").first()?.text() ?: ""
+                GuuResponse.Success(UserInfo(fullName = userFullName, group = userGroup))
+            }
+            302 -> {
+                GuuResponse.CookieExpired()
+            }
+            403 -> {
+                GuuResponse.Forbidden()
+            }
+            else -> {
+                GuuResponse.NotResponding("${response.status.code} ${response.status.description}")
+            }
         }
     }
 
@@ -87,7 +153,7 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
                 val classDTOs = json.decodeFromString<List<ClassDTO>>(eventsJsonArray)
 
                 return classDTOs.map {
-                    val classDescription = parseDescription(it.description)
+                    val classDescription = parseClassDescription(it.description)
                     it.toClassObject(classDescription)
                 }
             }
@@ -95,7 +161,7 @@ class GuuServiceImpl(private val client: HttpHandler) : GuuService {
         return emptyList()
     }
 
-    private fun parseDescription(htmlDescription: String): ClassDescription {
+    private fun parseClassDescription(htmlDescription: String): ClassDescription {
 
         val sDescription = htmlDescription.split("<br>")
         val map = mutableMapOf<String, String>()

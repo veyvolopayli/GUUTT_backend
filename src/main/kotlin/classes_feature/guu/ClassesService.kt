@@ -3,73 +3,28 @@ package org.example.classes_feature.guu
 import kotlinx.serialization.json.Json
 import org.example.ClassDTO
 import org.example.ClassDescription
+import org.example.ClassObject
+import org.example.currentSemester
 import org.example.tables.ClassesTable
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class ClassesService {
-    fun updateSchedule(group: String, classDtos: List<ClassDTO>) {
+    fun updateSchedule(group: String, classDtos: List<ClassObject>) {
         if (classDtos.size < 24) return
         val currentSemester = currentSemester() ?: return
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        val sortedClasses = classDtos.sortedBy {
-            val dateTime = LocalDateTime.parse(it.start, formatter)
-            dateTime
-        }
-        val actualClasses = sortedClasses.dropWhile {
+        val actualClasses = classDtos.dropWhile {
             val classDate = LocalDate.parse(it.start, formatter)
             classDate < currentSemester.first
         }
+        val classesFromDb = ClassesTable.fetchClassesForPeriod(group, currentSemester) // ClassObject
 
-        println(actualClasses)
-        actualClasses.forEach {
-            println(it.start.substringBefore('T'))
-        }
-
-        val actualClasseObjected = actualClasses.map { it.toClassObject(parseDescription(it.description)) }
-        val classesFromDb = ClassesTable.fetchClasses(group) // ClassObject
-
-        if (actualClasseObjected != classesFromDb) {
+        if (actualClasses != classesFromDb) {
             // Update classes
-            ClassesTable.updateClasses(group, currentSemester, actualClasseObjected)
+            ClassesTable.updateClasses(group, currentSemester, actualClasses)
         }
-    }
-
-    private fun currentSemester(): Pair<LocalDate, LocalDate>? {
-        val currentDate = LocalDate.now()
-        // Год, месяц, день
-        val summerSemesterStart = LocalDate.of(currentDate.year, 9, 1)
-        val summerSemesterEnd = LocalDate.of(currentDate.year, 12, 31)
-        val winterSemesterStart = LocalDate.of(currentDate.year, 1, 1)
-        val winterSemesterEnd = LocalDate.of(currentDate.year, 6, 30)
-
-        return when (currentDate) {
-            in summerSemesterStart..summerSemesterEnd -> summerSemesterStart to summerSemesterEnd
-            in winterSemesterStart..winterSemesterEnd -> winterSemesterStart to winterSemesterEnd
-            else -> null
-        }
-    }
-
-    private fun parseDescription(htmlDescription: String): ClassDescription {
-
-        val sDescription = htmlDescription.split("<br>")
-        val map = mutableMapOf<String, String>()
-        sDescription.forEach {
-            if (it.isNotEmpty()) {
-                val key = it.substringAfter("<b>").substringBefore("</b>")
-                val value = it.substringAfter("</b> ")
-                map[key] = value
-            }
-        }
-
-        val building = map.getOrDefault("Здание:", "")
-        val classroom = map.getOrDefault("Аудитория:", "")
-        val event = map.getOrDefault("Событие:", "")
-        val professor = map.getOrDefault("Преподаватель:", "")
-        val department = map.getOrDefault("Кафедра:", "")
-
-        return ClassDescription(building, classroom, event, professor, department)
     }
 }
 

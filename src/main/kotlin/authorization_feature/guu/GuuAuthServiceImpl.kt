@@ -7,6 +7,7 @@ import net.sourceforge.tess4j.Tesseract
 import org.example.*
 import org.example.authorization_feature.model.SimpleAuthDto
 import org.example.authorization_feature.security.AesEncryption
+import org.example.tables.UsersTable
 import org.example.tesseract.CaptchaServiceImpl
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
@@ -17,7 +18,7 @@ import java.io.File
 import kotlin.random.Random
 import kotlin.random.nextInt
 
-class GuuAuthServiceImpl(tesseract: Tesseract, aesEncryption: AesEncryption) : GuuAuthService, CaptchaServiceImpl(tesseract) {
+class GuuAuthServiceImpl(tesseract: Tesseract) : GuuAuthService, CaptchaServiceImpl(tesseract) {
 
     private fun downloadCaptcha(fileName: String, data: (captchaFile: File, cookies: List<Cookie>) -> Unit) {
         try {
@@ -67,9 +68,11 @@ class GuuAuthServiceImpl(tesseract: Tesseract, aesEncryption: AesEncryption) : G
                 // If captcha is not correct -> "Неправильный проверочный код."
                 // If both captcha and login/pass are not correct response will contain only wrong captcha message
 
-                if (response.bodyString().contains(GuuAuthMessages.INCORRECT_CAPTCHA)) {
+                val loginPage = response.bodyString()
+
+                if (loginPage.contains(GuuAuthMessages.INCORRECT_CAPTCHA)) {
                     AuthResult.WrongCaptcha
-                } else if (response.bodyString().contains(GuuAuthMessages.INCORRECT_LOGIN_PASSWORD)) {
+                } else if (loginPage.contains(GuuAuthMessages.INCORRECT_LOGIN_PASSWORD) || loginPage.contains(GuuAuthMessages.INCORRECT_EMAIL)) {
                     AuthResult.WrongLoginOrPassword
                 } else {
                     AuthResult.UnexpectedError
@@ -91,9 +94,7 @@ class GuuAuthServiceImpl(tesseract: Tesseract, aesEncryption: AesEncryption) : G
     private fun generateCaptchaName() = "img-${Random.nextInt(0..Int.MAX_VALUE)}.png"
 
     override fun procesAuth(login: String, password: String): AuthResult {
-
         var authResult: AuthResult = AuthResult.WrongCaptcha
-
         while (authResult is AuthResult.WrongCaptcha) {
             val captchaName = generateCaptchaName()
             downloadCaptcha(captchaName) { captchaFile, cookies ->
@@ -106,6 +107,11 @@ class GuuAuthServiceImpl(tesseract: Tesseract, aesEncryption: AesEncryption) : G
                 )
             }
         }
+
+        /*if (authResult is AuthResult.Success) {
+            val securedPass = aesEncryption.encryptPassword(login, password)
+            UsersTable.insertData(login, aesEncryption.encode(securedPass), authResult.cookies.stringify())
+        }*/
 
         return authResult
     }

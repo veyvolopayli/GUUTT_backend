@@ -1,8 +1,14 @@
 package org.example.tables
 
+import org.example.DbResponse
+import org.example.currentSemester
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.postgresql.util.PSQLException
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 object BachelorExcelsTable : Table("bachelor_excel") {
     private val courseColumn = integer("course").uniqueIndex()
@@ -60,7 +66,7 @@ object BachelorExcelsTable : Table("bachelor_excel") {
                 }
                 true
             }
-        } catch (e: Exception) {
+        } catch (e: PSQLException) {
             e.printStackTrace()
             false
         }
@@ -68,11 +74,13 @@ object BachelorExcelsTable : Table("bachelor_excel") {
 }
 
 fun main() {
-    Database.connect(
-        url = "jdbc:postgresql://5.181.255.253:5432/guutt", driver = "org.postgresql.Driver",
-        user = System.getenv("POSTGRES_USERNAME"), password = System.getenv("POSTGRES_PASSWORD")
-    )
-    val startDate = LocalDate.of(2024, 3, 30)
-    val endDate = LocalDate.of(2024, 5, 11)
-    println(ClassesTable.test(startDate to endDate))
+//    Database.connect(
+//        url = "jdbc:postgresql://5.181.255.253:5432/guutt", driver = "org.postgresql.Driver",
+//        user = System.getenv("POSTGRES_USERNAME"), password = System.getenv("POSTGRES_PASSWORD")
+//    )
+
+//    ClassesTable.testDelete("[ИИС] Прикладная информатика 3-1 (2021)", currentSemester()!!)
+
+//    BachelorExcelsTable.insertHash(1, "hash123")
+//    UsersTable.insertData("login123", "password1233", "12421")
 }

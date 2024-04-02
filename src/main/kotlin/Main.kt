@@ -6,9 +6,11 @@ import net.sourceforge.tess4j.Tesseract
 import org.example.authorization_feature.guu.AuthResult
 import org.example.authorization_feature.guu.GuuAuthServiceImpl
 import org.example.authorization_feature.security.AesEncryption
+import org.example.classes_feature.guu.ClassesService
 import org.example.tables.ClassesTable
 import org.example.tables.NewsTable
 import org.example.tables.UserDataTable
+import org.example.tables.UsersTable
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -32,12 +34,13 @@ suspend fun main() {
 
     val client = ApacheClient()
     val tesseract = Tesseract().also { it.setDatapath(tessdataDir) }
-    val guuService = GuuServiceImpl(client)
+    val guuService = GuuWebsiteServiceImpl(client)
     val aesEncryption = AesEncryption(
         keyStorePath = System.getenv("KS_PATH"),
         keyStorePassword = System.getenv("KS_PASS")
     )
-    val guuAuthService = GuuAuthServiceImpl(tesseract, aesEncryption)
+    val guuAuthService = GuuAuthServiceImpl(tesseract)
+    val classesService = ClassesService()
 
     val api = routes(
         "classes" bind Method.GET to { r: Request ->
@@ -47,26 +50,6 @@ suspend fun main() {
                     is DbResponse.Error -> Response(CONFLICT).body(dbResponse.message).specifyContentType()
                 }
             } ?: Response(BAD_REQUEST).body("Group required")
-        },
-        "authorize" bind Method.GET to { r: Request ->
-            r.header("c")?.let { cookie ->
-                val group = guuService.fetchGroup(cookie = cookie) ?: return@let Response(CONFLICT).body("GUU server side error...")
-                val classes = guuService.fetchClasses(cookie = cookie)
-
-                ClassesTable.insertClasses(studentGroup = group, classObjects = classes)?.let {
-                    Response(OK)
-                } ?: return@let Response(CONFLICT).body("База калла")
-
-                /*when(val dbResponse = ClassesTable.fetchClasses(group)) {
-                    is DbResponse.Success -> {
-                        Response(OK).body(Json.encodeToString(dbResponse.data))
-                    }
-                    is DbResponse.Error -> {
-                        Response(CONFLICT).body("Произошла ошибка при получении введенных данных")
-                    }
-                }*/
-
-            } ?: Response(BAD_REQUEST).body("Cookie required")
         },
         "groups" bind Method.GET to {
             when(val savedGroups = ClassesTable.getSavedGroups()) {
@@ -92,23 +75,45 @@ suspend fun main() {
         },
         "auth" bind Method.POST to { request ->
             val userAuthData = Json.decodeFromString<UserAuthData>(request.bodyString())
-            val authResult = guuAuthService.procesAuth(login = userAuthData.login, password = userAuthData.password)
-
-            when(authResult) {
-                is AuthResult.Success -> {
-                    Response(status = OK).body("Удачная авторизация! Куки: " + authResult.cookies.toString())
-                }
-                is AuthResult.WrongLoginOrPassword -> {
-                    Response(status = UNAUTHORIZED).body("Неверный логин или пароль.")
-                }
-                is AuthResult.UnexpectedError -> {
-                    Response(status = CONFLICT).body("Непредвиденная ошибка")
-                }
-                is AuthResult.UnknownResponseCode -> {
-                    Response(status = CONFLICT).body("Неожиданный код ответа: ${authResult.responseCode}")
-                }
-                else -> {
-                    Response(status = CONFLICT).body("Пу пу пууу...")
+            if (UsersTable.checkUserExistence(userAuthData.login) == true) {
+                Response(status = CONFLICT).body("Пользователь уже зарегистрирован в системе")
+            } else {
+                val authResult = guuAuthService.procesAuth(login = userAuthData.login, password = userAuthData.password)
+                when(authResult) {
+                    is AuthResult.Success -> {
+                        val authCookies = authResult.cookies.stringify()
+                        val securedPass = aesEncryption.encryptPassword(userAuthData.login, userAuthData.password)
+                        val userInfoResponse = guuService.getUserInfo(authCookies)
+                        if (userInfoResponse is GuuResponse.Success) {
+                            val insertDataResponse = UsersTable.insertData(userAuthData.login, aesEncryption.encode(securedPass), authCookies)
+                            if (insertDataResponse is DbResponse.Error) {
+                                UsersTable.updateCookies(userAuthData.login, authCookies)
+                            }
+                            UserDataTable.insertData(userAuthData.login, userInfoResponse.data)
+                            // Добавление расписания
+                            val guuClassesResponse = guuService.fetchClasses(authCookies)
+                            if (guuClassesResponse is GuuResponse.Success) {
+                                classesService.updateSchedule(userInfoResponse.data.group, guuClassesResponse.data)
+                                Response(status = OK).body("Удача!")
+                            } else {
+                                Response(status = CONFLICT).body("Не удалось получить расписание с сайта.")
+                            }
+                        } else {
+                            Response(status = CONFLICT).body("Возникла ошибка на одном из этапов авторизации. Повторите попытку!")
+                        }
+                    }
+                    is AuthResult.WrongLoginOrPassword -> {
+                        Response(status = UNAUTHORIZED).body("Неверный логин или пароль.")
+                    }
+                    is AuthResult.UnexpectedError -> {
+                        Response(status = CONFLICT).body("Непредвиденная ошибка")
+                    }
+                    is AuthResult.UnknownResponseCode -> {
+                        Response(status = CONFLICT).body("Неожиданный код ответа: ${authResult.responseCode}")
+                    }
+                    else -> {
+                        Response(status = CONFLICT).body("Пу пу пууу...")
+                    }
                 }
             }
         }
@@ -118,15 +123,57 @@ suspend fun main() {
 
     println("SERVER STARTED")
 
-    startRepeatableTimerTask(180) {
+    startRepeatableTimerTask(720) {
         guuService.fetchNews()
     }
 
     startRepeatableTimerTask(1440) {
-        val groupsResult = UserDataTable.getAllGroups()
-        if (groupsResult is DbResponse.Success) {
-            groupsResult.data.toSet().forEach { group ->
-
+        val loginsGroupsResult = UserDataTable.getAllUsersLoginsGroups()
+        if (loginsGroupsResult is DbResponse.Success) {
+            loginsGroupsResult.data.distinctBy { it.group }.forEach { userLoginGroup ->
+                val cookiesResponse = UsersTable.getCookies(userLoginGroup.login)
+                if (cookiesResponse is DbResponse.Success) {
+                    val guuClassesResponse = guuService.fetchClasses(cookiesResponse.data) // mapped and sorted
+                    when(guuClassesResponse) {
+                        is GuuResponse.Success -> {
+                            classesService.updateSchedule(userLoginGroup.group, guuClassesResponse.data)
+                        }
+                        is GuuResponse.CookieExpired -> {
+                            // Need to reauthorize
+                            val userPasswordResponse = UsersTable.getPassword(userLoginGroup.login)
+                            if (userPasswordResponse is DbResponse.Success) {
+                                val decryptedPass = aesEncryption.decryptPassword(userLoginGroup.login, aesEncryption.decode(userPasswordResponse.data))
+                                val authResponse = guuAuthService.procesAuth(userLoginGroup.login, decryptedPass)
+                                when(authResponse) {
+                                    is AuthResult.Success -> {
+                                        val classesResponse = guuService.fetchClasses(authResponse.cookies.stringify())
+                                        if (classesResponse is GuuResponse.Success) {
+                                            classesService.updateSchedule(userLoginGroup.group, classesResponse.data)
+                                        }
+                                    }
+                                    is AuthResult.WrongLoginOrPassword -> {
+                                        println("Какая-то ошибка с шифрованием. Возврат, что неверный пароль.")
+                                    }
+                                    is AuthResult.UnexpectedError -> {
+                                        println("Неожиданная ошибка при авторизации")
+                                    }
+                                    is AuthResult.UnknownResponseCode -> {
+                                        println("Странный код ответа: ${authResponse.responseCode}")
+                                    }
+                                    else -> {
+                                        println("Неизвестная ошибка при авторизации")
+                                    }
+                                }
+                            }
+                        }
+                        is GuuResponse.Forbidden -> {
+                            println("Не дает доступ")
+                        }
+                        is GuuResponse.NotResponding -> {
+                            println("Не отвечает")
+                        }
+                    }
+                }
             }
         }
     }

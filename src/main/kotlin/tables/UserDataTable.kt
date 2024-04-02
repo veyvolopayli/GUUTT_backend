@@ -1,8 +1,10 @@
 package org.example.tables
 
 import org.example.DbResponse
+import org.example.UserInfo
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.transactions.transaction
 
 object UserDataTable : Table("user_data") {
@@ -11,13 +13,13 @@ object UserDataTable : Table("user_data") {
     private val groupColumn = varchar("group", 100)
     private val registerTimeColumn = long("register_date")
 
-    fun saveData(login: String, fullName: String, group: String): DbResponse<Unit> {
+    fun insertData(login: String, userInfo: UserInfo): DbResponse<Unit> {
         return try {
             transaction {
-                insert {
+                insertIgnore {
                     it[loginColumn] = login
-                    it[fullNameColumn] = fullName
-                    it[groupColumn] = group
+                    it[fullNameColumn] = userInfo.fullName
+                    it[groupColumn] = userInfo.group
                     it[registerTimeColumn] = System.currentTimeMillis()
                 }
                 DbResponse.Success(Unit)
@@ -27,14 +29,20 @@ object UserDataTable : Table("user_data") {
         }
     }
 
-    fun getAllGroups(): DbResponse<List<String>> {
+    fun getAllUsersLoginsGroups(): DbResponse<List<UserLoginGroup>> {
         return try {
             transaction {
-                DbResponse.Success(select(groupColumn).map { it[groupColumn] })
+                DbResponse.Success(select(loginColumn, groupColumn).map {
+                    UserLoginGroup(
+                        login = it[loginColumn],
+                        group = it[groupColumn]
+                    )
+                })
             }
         } catch (e: Exception) {
             DbResponse.Error("${e.message}")
         }
     }
-    
+
+    data class UserLoginGroup(val login: String, val group: String)
 }

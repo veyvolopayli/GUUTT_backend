@@ -15,6 +15,7 @@ object Headers {
 object GuuAuthMessages {
     const val INCORRECT_LOGIN_PASSWORD = "Проверьте правильность введенных данных"
     const val INCORRECT_CAPTCHA = "Неправильный проверочный код"
+    const val INCORRECT_EMAIL = "Значение «Эл.почта» не является правильным email адресом"
 }
 
 private val isOsLinux = System.getProperty("os.name") == "Linux"
@@ -23,5 +24,3 @@ val captchaTempStorageDir = if (isOsLinux) "/root/guutt/captchas" else "src/main
 val unsolvedCaptchaDir = if (isOsLinux) "/root/guutt/unsolved_captcha" else "C:\\Users\\ilyap\\Documents\\TesseractUnsolvedCaptcha"
 
 val tessdataDir = if (isOsLinux) "/root/guutt/tessdata" else "src/main/kotlin/tesseract/tessdata"
-
-// /usr/share/tesseract-ocr/4.00/tessdata

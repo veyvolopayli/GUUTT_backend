@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
+import org.postgresql.util.PSQLException
 
 object UsersTable: Table("users") {
     private val loginColumn = varchar("login", 50).uniqueIndex()
@@ -15,14 +16,26 @@ object UsersTable: Table("users") {
         return try {
             transaction {
                 insert {
-                    it[this.loginColumn] = login
-                    it[this.passwordColumn] = password
-                    it[this.cookiesColumn] = cookies
+                    it[loginColumn] = login
+                    it[passwordColumn] = password
+                    it[cookiesColumn] = cookies
                 }
                 DbResponse.Success(Unit)
             }
         } catch (e: Exception) {
             DbResponse.Error("${e.message}")
+        }
+    }
+
+    fun checkUserExistence(login: String): Boolean? {
+        return try {
+            transaction {
+                select(loginColumn).where {
+                    loginColumn eq login
+                }.count() > 0
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -79,7 +92,7 @@ object UsersTable: Table("users") {
 
     data class AdminCookies(val login: String, val cookies: String)
 
-    fun updateAdminCookies(login: String, newCookies: String): Boolean? {
+    fun updateCookies(login: String, newCookies: String): Boolean? {
         return try {
             transaction {
                 update({ loginColumn eq login }) {
@@ -87,7 +100,7 @@ object UsersTable: Table("users") {
                 } == 1
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+//            e.printStackTrace()
             null
         }
     }

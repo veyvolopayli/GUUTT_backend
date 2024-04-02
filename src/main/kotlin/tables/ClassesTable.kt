@@ -84,6 +84,37 @@ object ClassesTable : Table("classes") {
         }
     }
 
+    fun fetchClassesForPeriod(group: String, period: Pair<LocalDate, LocalDate>): List<ClassObject>? {
+        return try {
+            transaction {
+                selectAll().where {
+                    (groupColumn eq group) and startColumn.between(
+                        period.first.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
+                        period.second.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
+                    )
+                }.map {
+                    ClassObject(
+                        id = it[idColumn],
+                        title = it[titleColumn],
+                        color = it[colorColumn],
+                        start = it[startColumn],
+                        end = it[endColumn],
+                        description = ClassDescription(
+                            building = it[buildingColumn],
+                            classroom = it[classroomColumn],
+                            event = it[eventColumn],
+                            professor = it[professorColumn],
+                            department = it[departmentColumn]
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun getSavedGroups(): DbResponse<List<String>> {
         return try {
             transaction {
@@ -113,33 +144,19 @@ object ClassesTable : Table("classes") {
         }
     }
 
-    fun test(semester: Pair<LocalDate, LocalDate>): List<ClassObject> {
-        return try {
+    fun testDelete(group: String, semester: Pair<LocalDate, LocalDate>) {
+        try {
             transaction {
-                selectAll().where {
-                    startColumn.between(
+                deleteWhere {
+                    (groupColumn eq group) and startColumn.between(
                         semester.first.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
                         semester.second.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
                     )
-                }.map {
-                    ClassObject(
-                        id = it[idColumn],
-                        title = it[titleColumn],
-                        color = it[colorColumn],
-                        start = it[startColumn],
-                        end = it[endColumn],
-                        description = ClassDescription(
-                            building = it[buildingColumn],
-                            classroom = it[classroomColumn],
-                            event = it[eventColumn],
-                            professor = it[professorColumn],
-                            department = it[departmentColumn]
-                        )
-                    )
                 }
             }
+            DbResponse.Success(Unit)
         } catch (e: Exception) {
-            emptyList()
+            DbResponse.Error("${e.message}")
         }
     }
 }
