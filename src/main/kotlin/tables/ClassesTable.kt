@@ -3,6 +3,7 @@ package org.example.tables
 import org.example.ClassDescription
 import org.example.ClassObject
 import org.example.DbResponse
+import org.example.fillDatesGaps
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -53,6 +54,7 @@ object ClassesTable : Table("classes") {
             // так как формат времени yyyy-MM-dd'T'HH:mm:ss навряд ли изменится
             DbResponse.Success(data = classes.groupBy { it.start.substringBefore('T') })
         } catch (e: Exception) {
+            e.printStackTrace()
             DbResponse.Error(e.message ?: "Unexpected error")
         }
     }
@@ -62,7 +64,7 @@ object ClassesTable : Table("classes") {
             transaction {
                 selectAll().where {
                     groupColumn eq group.trim()
-                }.map {
+                }.orderBy(startColumn).map {
                     ClassObject(
                         id = it[idColumn],
                         title = it[titleColumn],
@@ -80,6 +82,7 @@ object ClassesTable : Table("classes") {
                 }
             }
         } catch (e: Exception) {
+            e.printStackTrace()
             emptyList()
         }
     }
@@ -92,7 +95,7 @@ object ClassesTable : Table("classes") {
                         period.first.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
                         period.second.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
                     )
-                }.map {
+                }.orderBy(startColumn).map {
                     ClassObject(
                         id = it[idColumn],
                         title = it[titleColumn],
@@ -138,22 +141,6 @@ object ClassesTable : Table("classes") {
                 }
             }
             insertClasses(group, newClasses)
-            DbResponse.Success(Unit)
-        } catch (e: Exception) {
-            DbResponse.Error("${e.message}")
-        }
-    }
-
-    fun testDelete(group: String, semester: Pair<LocalDate, LocalDate>) {
-        try {
-            transaction {
-                deleteWhere {
-                    (groupColumn eq group) and startColumn.between(
-                        semester.first.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
-                        semester.second.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
-                    )
-                }
-            }
             DbResponse.Success(Unit)
         } catch (e: Exception) {
             DbResponse.Error("${e.message}")

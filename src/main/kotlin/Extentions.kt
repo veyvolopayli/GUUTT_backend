@@ -38,15 +38,18 @@ fun org.http4k.core.Request.applyAuthCookies(cookies: List<org.http4k.core.cooki
 }
 
 fun Map<String, List<ClassObject>>.fillDatesGaps(): Map<String, List<ClassObject>> {
-    val thisYear = java.time.LocalDate.now().year
+//    val thisYear = java.time.LocalDate.now().year
 
     // Написать более оптимизированный алгоритм
-    val siftedDaysMap = this.filter {
-        it.key.take(4).toInt() >= thisYear - 1
-    }
+//    val siftedDaysMap = this.filter {
+//        it.key.take(4).toInt() >= thisYear - 1
+//    }
 
-    val startDate = siftedDaysMap.keys.first()
-    val endDate = siftedDaysMap.keys.last()
+//    val startDate = siftedDaysMap.keys.first()
+//    val endDate = siftedDaysMap.keys.last()
+
+    val startDate = this.keys.first()
+    val endDate = this.keys.last()
 
     val filledDateMap = mutableMapOf<java.time.LocalDate, List<ClassObject>>()
     val format = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -57,7 +60,7 @@ fun Map<String, List<ClassObject>>.fillDatesGaps(): Map<String, List<ClassObject
     var currentDate = sDate
 
     while (!currentDate.isAfter(eDate)) {
-        filledDateMap[currentDate] = siftedDaysMap.getOrDefault(currentDate.toString(), emptyList())
+        filledDateMap[currentDate] = this.getOrDefault(currentDate.toString(), emptyList())
         currentDate = currentDate.plus(1, java.time.temporal.ChronoUnit.DAYS)
     }
 
