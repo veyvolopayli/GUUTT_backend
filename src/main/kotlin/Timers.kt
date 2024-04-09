@@ -1,11 +1,15 @@
 package org.example
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
-suspend fun startRepeatableTimerTask(minutesInterval: Long, block: suspend () -> Unit) {
-    while (true) {
-        block()
-        delay(TimeUnit.MINUTES.toMillis(minutesInterval))
+fun CoroutineScope.launchRepeatingTask(minutesInterval: Long, block: () -> Unit) {
+    launch {
+        while (true) {
+            block()
+            delay(TimeUnit.MINUTES.toMillis(minutesInterval))
+        }
     }
 }

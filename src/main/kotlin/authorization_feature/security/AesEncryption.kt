@@ -39,8 +39,8 @@ class AesEncryption(private val keyStorePath: String, keyStorePassword: String) 
         return cipher.doFinal(password.toByteArray())
     }
 
-    fun decryptPassword(userId: String, encryptedPass: ByteArray): String {
-        val key = getSecretKey(userId)
+    fun decryptPassword(userId: String, encryptedPass: ByteArray): String? {
+        val key = getSecretKey(userId) ?: return null
         cipher.init(Cipher.DECRYPT_MODE, key)
         return String(cipher.doFinal(encryptedPass))
     }
@@ -61,35 +61,22 @@ class AesEncryption(private val keyStorePath: String, keyStorePassword: String) 
     fun decode(data: String): ByteArray = Base64.getDecoder().decode(data)
 }
 
-suspend fun main() {
-    try {
-        val aesEncryption = AesEncryption("keystore.jks", "somePassword")
-        val passFromDb = "sKqcblsWRHlbhxfbQ75g4A=="
-        val decodedPass = aesEncryption.decode(passFromDb)
-
-        println(aesEncryption.decryptPassword("user1", decodedPass))
-    } catch (e: InvalidKeyException) {
-        // No SecretKey stored with this alias
-        e.printStackTrace()
-    } catch (e: BadPaddingException) {
-        // Secret key is not correct for this encrypted password
-        e.printStackTrace()
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-
-
-}
-
-/*
-CAre5J52ynjruwowPKphVA==
-bl4oSCSdV1Z5W5QKVx7tMw==
-rH7jWTSuHan5u9ZyRKye+Q==
-OZWW4Ozpzt8U1WGcgmVfEg==
-w+B7PqBabCSmEdQWj2q3YQ==
-eqxDQbYSiWE+2/10pbuwMQ==
-sKqcblsWRHlbhxfbQ75g4A==
-RnFsKtVH/LCqbDVqC820+w==
-4wD+6UVZBAQyhasfv6b89Q==
-tPQ1Xa+7NG6yR17hErtnBA==
-*/
+//fun main() {
+//    try {
+//        val aesEncryption = AesEncryption("keystore.jks", "somePassword")
+//        val passFromDb = "sKqcblsWRHlbhxfbQ75g4A=="
+//        val decodedPass = aesEncryption.decode(passFromDb)
+//
+//        println(aesEncryption.decryptPassword("user1", decodedPass))
+//    } catch (e: InvalidKeyException) {
+//        // No SecretKey stored with this alias
+//        e.printStackTrace()
+//    } catch (e: BadPaddingException) {
+//        // Secret key is not correct for this encrypted password
+//        e.printStackTrace()
+//    } catch (e: Exception) {
+//        e.printStackTrace()
+//    }
+//
+//
+//}

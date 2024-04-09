@@ -1,7 +1,9 @@
 package org.example.tables
 
 import org.example.DbResponse
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -102,6 +104,18 @@ object UsersTable: Table("users") {
         } catch (e: Exception) {
 //            e.printStackTrace()
             null
+        }
+    }
+
+    fun deleteUser(login: String): Boolean {
+        return try {
+            transaction {
+                deleteWhere {
+                    loginColumn eq login
+                } > 0
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 }

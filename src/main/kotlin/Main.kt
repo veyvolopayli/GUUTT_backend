@@ -1,5 +1,6 @@
 package org.example
 
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.sourceforge.tess4j.Tesseract
@@ -25,7 +26,7 @@ import org.http4k.server.Jetty
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
 
-suspend fun main() {
+suspend fun main() = coroutineScope {
 
     Database.connect(
         url = "jdbc:postgresql://5.181.255.253:5432/guutt", driver = "org.postgresql.Driver",
@@ -93,7 +94,7 @@ suspend fun main() {
                             // Добавление расписания
                             val guuClassesResponse = guuService.fetchClasses(authCookies)
                             if (guuClassesResponse is GuuResponse.Success) {
-                                classesService.updateSchedule(userInfoResponse.data.group, guuClassesResponse.data)
+                                classesService.updateScheduleOrNothing(userInfoResponse.data.group, guuClassesResponse.data)
                                 Response(status = OK).body("Удача!")
                             } else {
                                 Response(status = CONFLICT).body("Не удалось получить расписание с сайта.")
@@ -123,11 +124,11 @@ suspend fun main() {
 
     println("SERVER STARTED")
 
-    startRepeatableTimerTask(720) {
+    launchRepeatingTask(720) {
         guuService.fetchNews()
     }
 
-    startRepeatableTimerTask(1440) {
+    launchRepeatingTask(1440) {
         val loginsGroupsResult = UserDataTable.getAllUsersLoginsGroups()
         if (loginsGroupsResult is DbResponse.Success) {
             loginsGroupsResult.data.distinctBy { it.group }.forEach { userLoginGroup ->
@@ -136,19 +137,23 @@ suspend fun main() {
                     val guuClassesResponse = guuService.fetchClasses(cookiesResponse.data) // mapped and sorted
                     when(guuClassesResponse) {
                         is GuuResponse.Success -> {
-                            classesService.updateSchedule(userLoginGroup.group, guuClassesResponse.data)
+                            classesService.updateScheduleOrNothing(userLoginGroup.group, guuClassesResponse.data)
                         }
                         is GuuResponse.CookieExpired -> {
                             // Need to reauthorize
                             val userPasswordResponse = UsersTable.getPassword(userLoginGroup.login)
                             if (userPasswordResponse is DbResponse.Success) {
-                                val decryptedPass = aesEncryption.decryptPassword(userLoginGroup.login, aesEncryption.decode(userPasswordResponse.data))
+                                val securedPassword = userPasswordResponse.data
+                                val passwordBytes = aesEncryption.decode(securedPassword) // Get byteArray from base64 password string
+                                // Need to add notification that keystore doesn't have this user secret key somehow.
+                                // Every usersList iteration will be skipped if keystore file is broken or empty, this is so stupid
+                                val decryptedPass = aesEncryption.decryptPassword(userLoginGroup.login, passwordBytes) ?: return@forEach
                                 val authResponse = guuAuthService.procesAuth(userLoginGroup.login, decryptedPass)
                                 when(authResponse) {
                                     is AuthResult.Success -> {
                                         val classesResponse = guuService.fetchClasses(authResponse.cookies.stringify())
                                         if (classesResponse is GuuResponse.Success) {
-                                            classesService.updateSchedule(userLoginGroup.group, classesResponse.data)
+                                            classesService.updateScheduleOrNothing(userLoginGroup.group, classesResponse.data)
                                         }
                                     }
                                     is AuthResult.WrongLoginOrPassword -> {
