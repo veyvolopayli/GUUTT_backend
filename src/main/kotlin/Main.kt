@@ -25,6 +25,7 @@ import org.http4k.routing.routes
 import org.http4k.server.Jetty
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
+import java.util.concurrent.TimeUnit
 
 suspend fun main() = coroutineScope {
 
@@ -43,13 +44,33 @@ suspend fun main() = coroutineScope {
     val guuAuthService = GuuAuthServiceImpl(tesseract)
     val classesService = ClassesService()
 
+    val cachingService = CachingService(5000, 3L to TimeUnit.HOURS)
+
     val api = routes(
         "classes" bind Method.GET to { r: Request ->
             r.query("g")?.let { group ->
-                when (val dbResponse = ClassesTable.fetchGroupedClasses(group)) {
-                    is DbResponse.Success -> Response(OK).body(Json.encodeToString(dbResponse.data.fillDatesGaps())).specifyContentType()
-                    is DbResponse.Error -> Response(CONFLICT).body(dbResponse.message).specifyContentType()
+                val cachedClasses = cachingService.getCache(group) as? Map<String, List<ClassObject>>
+                if (cachedClasses == null) {
+                    when(val dbResponse = ClassesTable.fetchGroupedClasses(group)) {
+                        is DbResponse.Success -> {
+                            // Залить в кэш
+                            val classes = dbResponse.data.fillDatesGaps()
+                            if (classes.isNotEmpty()) {
+                                cachingService.putCache(group.trim(), classes)
+                            }
+                            Response(OK).body(Json.encodeToString(classes)).specifyContentType()
+                        }
+                        is DbResponse.Error -> {
+                            Response(CONFLICT).body(dbResponse.message).specifyContentType()
+                        }
+                    }
+                } else {
+                    Response(OK).body(Json.encodeToString(cachedClasses)).specifyContentType()
                 }
+//                when (val dbResponse = ClassesTable.fetchGroupedClasses(group)) {
+//                    is DbResponse.Success -> Response(OK).body(Json.encodeToString(dbResponse.data.fillDatesGaps())).specifyContentType()
+//                    is DbResponse.Error -> Response(CONFLICT).body(dbResponse.message).specifyContentType()
+//                }
             } ?: Response(BAD_REQUEST).body("Group required")
         },
         "groups" bind Method.GET to {

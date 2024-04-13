@@ -35,6 +35,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     sshAntTask("org.apache.ant:ant-jsch:1.10.12")
     implementation("net.sourceforge.tess4j:tess4j:5.11.0")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 }
 
 tasks.withType<ShadowJar> {
