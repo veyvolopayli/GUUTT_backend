@@ -1,5 +1,8 @@
 package org.example
 
+import org.example.classes_feature.data.ClassObject
+import org.example.common.results.GuuResponse
+
 interface GuuWebsiteService {
     fun fetchGroup(cookie: String): String?
     fun fetchClasses(cookie: String): GuuResponse<List<ClassObject>>

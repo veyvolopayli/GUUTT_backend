@@ -1,6 +1,6 @@
 package org.example.classes_feature.guu
 
-import org.example.applyHeaders
+import org.example.common.applyHeaders
 import org.example.tables.BachelorExcelsTable
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method

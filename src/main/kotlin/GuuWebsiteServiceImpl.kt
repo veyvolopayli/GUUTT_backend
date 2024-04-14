@@ -1,6 +1,13 @@
 package org.example
 
 import kotlinx.serialization.json.Json
+import org.example.classes_feature.data.ClassDTO
+import org.example.classes_feature.data.ClassDescription
+import org.example.classes_feature.data.ClassObject
+import org.example.common.GuuLinks
+import org.example.common.applyHeaders
+import org.example.common.cookieString
+import org.example.common.results.GuuResponse
 import org.example.tables.NewsTable
 import org.http4k.client.ApacheClient
 import org.http4k.core.HttpHandler

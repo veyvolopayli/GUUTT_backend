@@ -5,7 +5,7 @@ import net.sourceforge.tess4j.TesseractException
 import java.io.File
 
 open class CaptchaServiceImpl(private val tesseract: Tesseract): CaptchaService {
-    override fun solveCaptcha(file: File): String {
+    override fun solveAndDelete(file: File): String {
         return try {
             tesseract.doOCR(file).lowercase()
         } catch (e: TesseractException) {
@@ -18,7 +18,7 @@ open class CaptchaServiceImpl(private val tesseract: Tesseract): CaptchaService 
         }
     }
 
-    override fun solveCaptcha(filePath: String): String {
+    override fun solveAndDelete(filePath: String): String {
         val file = File(filePath)
         return try {
             tesseract.doOCR(File(filePath))

@@ -36,6 +36,7 @@ dependencies {
     sshAntTask("org.apache.ant:ant-jsch:1.10.12")
     implementation("net.sourceforge.tess4j:tess4j:5.11.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
+    implementation("ch.qos.logback:logback-classic:1.5.5")
 }
 
 tasks.withType<ShadowJar> {
