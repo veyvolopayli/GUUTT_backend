@@ -1,20 +1,18 @@
-package org.example.authorization_feature.security
+package api.authorization.security
 
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import java.security.InvalidKeyException
 import java.security.KeyStore
 import java.security.KeyStore.SecretKeyEntry
 import java.security.SecureRandom
 import java.util.*
-import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
 
-class AesEncryption(private val keyStorePath: String, keyStorePassword: String) {
+open class AesEncryption(private val keyStorePath: String, keyStorePassword: String) {
     private val keyGen = KeyGenerator.getInstance("AES").also { it.init(256, SecureRandom()) }
     private val cipher = Cipher.getInstance("AES")
     private val keyStore = KeyStore.getInstance("JCEKS")
@@ -32,17 +30,18 @@ class AesEncryption(private val keyStorePath: String, keyStorePassword: String) 
         }
     }
 
-    fun encryptPassword(userId: String, password: String): ByteArray {
+    fun encryptData(uniqueKey: String, data: String): ByteArray {
         val key = keyGen.generateKey()
-        saveSecretKey(userId, key)
+        saveSecretKey(uniqueKey, key)
         cipher.init(Cipher.ENCRYPT_MODE, key)
-        return cipher.doFinal(password.toByteArray())
+        return cipher.doFinal(data.toByteArray())
     }
 
-    fun decryptPassword(userId: String, encryptedPass: ByteArray): String? {
-        val key = getSecretKey(userId) ?: return null
+    fun decryptData(uniqueKey: String, encryptedData: String): String? {
+        val key = getSecretKey(uniqueKey) ?: return null
         cipher.init(Cipher.DECRYPT_MODE, key)
-        return String(cipher.doFinal(encryptedPass))
+        val dataBytes = decode(encryptedData)
+        return String(cipher.doFinal(dataBytes))
     }
 
     private fun saveSecretKey(keyId: String, key: SecretKey) {
