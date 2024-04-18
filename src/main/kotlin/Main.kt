@@ -8,6 +8,8 @@ import org.example.api.authorization.AuthorizationServiceImpl
 import org.example.api.authorization.GuuWebsiteAuthResult
 import org.example.api.authorization.GuuAuthServiceImpl
 import api.authorization.security.AesEncryption
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import org.example.api.authorization.AuthResult
 import org.example.authorization_feature.security.UserPasswordSecurity
 import org.example.classes_feature.data.ClassObject
@@ -21,6 +23,7 @@ import org.example.tables.UsersTable
 import org.example.tables.response.DbResponse
 import org.example.tesseract.CaptchaServiceImpl
 import org.http4k.client.ApacheClient
+import org.http4k.core.Body
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
@@ -34,7 +37,9 @@ import org.http4k.routing.routes
 import org.http4k.server.Jetty
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.JoinType
 import java.util.concurrent.TimeUnit
+import javax.imageio.ImageIO
 
 suspend fun main() = coroutineScope {
 
@@ -113,46 +118,49 @@ suspend fun main() = coroutineScope {
             if (UsersTable.checkUserExistence(userAuthData.login) == true) {
                 Response(status = CONFLICT).body("Пользователь уже зарегистрирован в системе")
             } else {
-                val authResult = authService.authenticate(login = userAuthData.login, password = userAuthData.login)
-                when(authResult) {
-                    is AuthResult.Success -> {
-                        val cookies = authResult.cookies.stringify()
-                        val isPassSaved = userPasswordSecurity.saveSecuredPassword(login = userAuthData.login, password = userAuthData.login, cookies = cookies)
-                        if (isPassSaved) {
-                            val group = userPasswordSecurity.getAndSaveUserInfo(login = userAuthData.login, cookies = cookies)
-                            when(val classes = guuService.fetchClasses(cookies)) {
-                                is GuuResponse.Success -> {
-                                    if (group != null) {
-                                        classesService.updateScheduleOrNothing(group = group, classes.data)
-                                        Response(OK)
-                                    } else {
-                                        Response(INTERNAL_SERVER_ERROR).body("Не удалось сохранить расписание")
+                launch {
+                    val authResult = authService.authenticate(login = userAuthData.login, password = userAuthData.login)
+                    when(authResult) {
+                        is AuthResult.Success -> {
+                            val cookies = authResult.cookies.stringify()
+                            val isPassSaved = userPasswordSecurity.saveSecuredPassword(login = userAuthData.login, password = userAuthData.login, cookies = cookies)
+                            if (isPassSaved) {
+                                val group = userPasswordSecurity.getAndSaveUserInfo(login = userAuthData.login, cookies = cookies)
+                                when(val classes = guuService.fetchClasses(cookies)) {
+                                    is GuuResponse.Success -> {
+                                        if (group != null) {
+                                            classesService.updateScheduleOrNothing(group = group, classes.data)
+                                            Response(OK)
+                                        } else {
+                                            Response(INTERNAL_SERVER_ERROR).body("Не удалось сохранить расписание")
+                                        }
+                                    }
+                                    is GuuResponse.Forbidden -> {
+                                        Response(INTERNAL_SERVER_ERROR).body("Не удалось получить распиание с сайта. FORBIDDEN")
+                                    }
+                                    is GuuResponse.NotResponding -> {
+                                        Response(INTERNAL_SERVER_ERROR).body("Не удалось получить распиание с сайта. NOT RESPONDING")
+                                    }
+                                    is GuuResponse.CookieExpired -> {
+                                        Response(INTERNAL_SERVER_ERROR).body("Не удалось получить распиание с сайта. COOKIE EXPIRED")
                                     }
                                 }
-                                is GuuResponse.Forbidden -> {
-                                    Response(INTERNAL_SERVER_ERROR).body("Не удалось получить распиание с сайта. FORBIDDEN")
-                                }
-                                is GuuResponse.NotResponding -> {
-                                    Response(INTERNAL_SERVER_ERROR).body("Не удалось получить распиание с сайта. NOT RESPONDING")
-                                }
-                                is GuuResponse.CookieExpired -> {
-                                    Response(INTERNAL_SERVER_ERROR).body("Не удалось получить распиание с сайта. COOKIE EXPIRED")
-                                }
+                            } else {
+                                Response(CONFLICT).body("Не удалось зарегистрировать пользователя. Код ошибки 111.")
                             }
-                        } else {
-                            Response(CONFLICT).body("Не удалось зарегистрировать пользователя. Код ошибки 111.")
+                        }
+                        is AuthResult.WrongLoginPassword -> {
+                            Response(status = UNAUTHORIZED).body("Неверный логин или пароль.")
+                        }
+                        is AuthResult.ServerError -> {
+                            Response(status = CONFLICT).body("Непредвиденная ошибка на сервере")
+                        }
+                        is AuthResult.WebsiteIsDown -> {
+                            Response(status = CONFLICT).body("Проблемы с личным кабинетом ГУУ: ${authResult.details}")
                         }
                     }
-                    is AuthResult.WrongLoginPassword -> {
-                        Response(status = UNAUTHORIZED).body("Неверный логин или пароль.")
-                    }
-                    is AuthResult.ServerError -> {
-                        Response(status = CONFLICT).body("Непредвиденная ошибка на сервере")
-                    }
-                    is AuthResult.WebsiteIsDown -> {
-                        Response(status = CONFLICT).body("Проблемы с личным кабинетом ГУУ: ${authResult.details}")
-                    }
                 }
+                Response(OK)
             }
         }
     )
@@ -166,7 +174,7 @@ suspend fun main() = coroutineScope {
             guuService.fetchNews()
         }
 
-        launchRepeatingTask(1440) {
+        /*launchRepeatingTask(1440) {
             val loginsGroupsResult = UserDataTable.getAllUsersLoginsGroups()
             if (loginsGroupsResult is DbResponse.Success) {
                 loginsGroupsResult.data.distinctBy { it.group }.forEach { userLoginGroup ->
@@ -218,6 +226,15 @@ suspend fun main() = coroutineScope {
                     }
                 }
             }
+        }*/
+
+        launchRepeatingTask(360) {
+//            val groupAndCookie = UserDataTable.join(otherTable = UsersTable, joinType = JoinType.INNER, onColumn = UsersTable.)
+            val (image, cookies) = guuAuthService.getCaptcha() ?: return@launchRepeatingTask
+            val captchaResult = async {
+                captchaService.solve(image)
+            }
+
         }
     }
 }

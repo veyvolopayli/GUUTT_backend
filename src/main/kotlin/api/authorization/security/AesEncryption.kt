@@ -10,6 +10,7 @@ import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import kotlin.jvm.Throws
 
 
 open class AesEncryption(private val keyStorePath: String, keyStorePassword: String) {
@@ -57,6 +58,7 @@ open class AesEncryption(private val keyStorePath: String, keyStorePassword: Str
 
     fun encode(data: ByteArray): String = Base64.getEncoder().encodeToString(data)
 
+    @Throws(IllegalArgumentException::class)
     fun decode(data: String): ByteArray = Base64.getDecoder().decode(data)
 }
 

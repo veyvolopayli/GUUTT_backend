@@ -1,12 +1,17 @@
 package org.example.api.authorization
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.example.common.stringify
+import org.example.logger
 import org.example.tesseract.CaptchaService
+import java.util.concurrent.atomic.AtomicInteger
 
 class AuthorizationServiceImpl(private val guuAuthService: GuuAuthService, private val captchaService: CaptchaService) : AuthorizationService {
-    override fun authenticate(login: String, password: String): AuthResult {
-        val (captchaFile, cookies) = guuAuthService.downloadCaptcha() ?: return AuthResult.ServerError
-        val captchaResult = captchaService.solveAndDelete(captchaFile)
+    private var countOfAuthFailures = AtomicInteger(0)
+    override suspend fun authenticate(login: String, password: String): AuthResult {
+        val (captcha, cookies) = withContext(Dispatchers.IO) { guuAuthService.getCaptcha() } ?: return AuthResult.ServerError
+        val captchaResult = captchaService.solve(captcha) ?: return AuthResult.ServerError
         val authResult = guuAuthService.authorize(
             login = login,
             password = password,
@@ -15,9 +20,11 @@ class AuthorizationServiceImpl(private val guuAuthService: GuuAuthService, priva
         )
         return when(authResult) {
             is GuuWebsiteAuthResult.Success -> {
+                logger.info("Number of failed authorization attempts due to captcha: ${countOfAuthFailures.getAndSet(0)}")
                 AuthResult.Success(authResult.cookies)
             }
             is GuuWebsiteAuthResult.WrongCaptcha -> {
+                countOfAuthFailures.incrementAndGet()
                 authenticate(login, password)
             }
             is GuuWebsiteAuthResult.WrongLoginOrPassword -> {

@@ -9,9 +9,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 
 object UsersTable: Table("users") {
-    private val loginColumn = varchar("login", 50).uniqueIndex()
-    private val passwordColumn = varchar("password", 24)
-    private val cookiesColumn = varchar("cookies", 255)
+    val loginColumn = varchar("login", 50).uniqueIndex()
+    val passwordColumn = varchar("password", 24)
+    val cookiesColumn = varchar("cookies", 255)
 
     fun insertData(login: String, password: String, cookies: String): DbResponse<Unit> {
         return try {

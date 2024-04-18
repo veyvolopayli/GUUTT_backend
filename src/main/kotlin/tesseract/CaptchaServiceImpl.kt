@@ -2,10 +2,11 @@ package org.example.tesseract
 
 import net.sourceforge.tess4j.Tesseract
 import net.sourceforge.tess4j.TesseractException
+import java.awt.image.BufferedImage
 import java.io.File
 
 open class CaptchaServiceImpl(private val tesseract: Tesseract): CaptchaService {
-    override fun solveAndDelete(file: File): String {
+    override suspend fun solveAndDelete(file: File): String {
         return try {
             tesseract.doOCR(file).lowercase()
         } catch (e: TesseractException) {
@@ -18,7 +19,7 @@ open class CaptchaServiceImpl(private val tesseract: Tesseract): CaptchaService 
         }
     }
 
-    override fun solveAndDelete(filePath: String): String {
+    override suspend fun solveAndDelete(filePath: String): String {
         val file = File(filePath)
         return try {
             tesseract.doOCR(File(filePath))
@@ -29,6 +30,14 @@ open class CaptchaServiceImpl(private val tesseract: Tesseract): CaptchaService 
             if (file.exists()) {
                 file.delete()
             }
+        }
+    }
+
+    override suspend fun solve(bufferedImage: BufferedImage): String? {
+        return try {
+            tesseract.doOCR(bufferedImage)
+        } catch (e: TesseractException) {
+            null
         }
     }
 }

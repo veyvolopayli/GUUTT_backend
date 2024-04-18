@@ -1,9 +1,18 @@
 package org.example.tables
 
+import api.authorization.security.AesEncryption
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
+import net.sourceforge.tess4j.Tesseract
 import org.example.tables.response.DbResponse
 import org.example.UserInfo
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.insertIgnore
+import org.example.api.authorization.AuthResult
+import org.example.api.authorization.AuthorizationServiceImpl
+import org.example.api.authorization.GuuAuthServiceImpl
+import org.example.common.tessdataDir
+import org.example.logger
+import org.example.tesseract.CaptchaServiceImpl
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 object UserDataTable : Table("user_data") {
@@ -43,5 +52,32 @@ object UserDataTable : Table("user_data") {
         }
     }
 
-    data class UserLoginGroup(val login: String, val group: String)
+    fun selectAllWithCookies(aesEncryption: AesEncryption): List<UserLoginGroup>? {
+        return try {
+            transaction {
+                join(
+                    otherTable = UsersTable,
+                    joinType = JoinType.INNER,
+                    onColumn = loginColumn,
+                    otherColumn = UsersTable.loginColumn
+                ).select(loginColumn, groupColumn, UsersTable.cookiesColumn)
+                    .map {
+                        val login = it[loginColumn]
+                        val group = it[groupColumn]
+                        val cookies = it[UsersTable.cookiesColumn]
+                        UserLoginGroup(
+                            login = login,
+                            group = group,
+//                            cookies = aesEncryption.decryptData(login, cookies)
+                            cookies
+                        )
+                    }
+            }
+        } catch (e: Exception) {
+            logger.error(e.message)
+            null
+        }
+    }
+
+    data class UserLoginGroup(val login: String, val group: String, val cookies: String? = null)
 }
