@@ -68,8 +68,7 @@ object UserDataTable : Table("user_data") {
                         UserLoginGroup(
                             login = login,
                             group = group,
-//                            cookies = aesEncryption.decryptData(login, cookies)
-                            cookies
+                            cookies = aesEncryption.decryptData(login, cookies) ?: cookies
                         )
                     }
             }
@@ -80,4 +79,18 @@ object UserDataTable : Table("user_data") {
     }
 
     data class UserLoginGroup(val login: String, val group: String, val cookies: String? = null)
+}
+
+fun main(): Unit = runBlocking {
+    Database.connect(
+        url = "jdbc:postgresql://5.181.255.253:5432/guutt", driver = "org.postgresql.Driver",
+        user = System.getenv("POSTGRES_USERNAME"), password = System.getenv("POSTGRES_PASSWORD")
+    )
+    val aesEncryption = AesEncryption(
+        keyStorePath = System.getenv("KS_PATH"),
+        keyStorePassword = System.getenv("KS_PASS")
+    )
+    UserDataTable.selectAllWithCookies(aesEncryption)?.forEach {
+        println(it)
+    }
 }

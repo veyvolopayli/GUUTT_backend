@@ -41,7 +41,7 @@ open class AesEncryption(private val keyStorePath: String, keyStorePassword: Str
     fun decryptData(uniqueKey: String, encryptedData: String): String? {
         val key = getSecretKey(uniqueKey) ?: return null
         cipher.init(Cipher.DECRYPT_MODE, key)
-        val dataBytes = decode(encryptedData)
+        val dataBytes = try { decode(encryptedData) } catch (e: Exception) { return null }
         return String(cipher.doFinal(dataBytes))
     }
 

@@ -1,5 +1,7 @@
 package org.example.tables
 
+import api.authorization.security.AesEncryption
+import org.example.logger
 import org.example.tables.response.DbResponse
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
@@ -40,16 +42,17 @@ object UsersTable: Table("users") {
         }
     }
 
-    fun getPassword(login: String): DbResponse<String> {
+    fun getDecryptedPassword(login: String, aesEncryption: AesEncryption): String? {
         return try {
             transaction {
-                val password = select(passwordColumn).where {
+                val encryptedPass = select(passwordColumn).where {
                     loginColumn eq login
-                }.first()[passwordColumn]
-                DbResponse.Success(password)
+                }.single()[passwordColumn]
+                aesEncryption.decryptData(login, encryptedPass)
             }
         } catch (e: Exception) {
-            DbResponse.Error("${e.message}")
+            logger.error(e.message)
+            null
         }
     }
 
