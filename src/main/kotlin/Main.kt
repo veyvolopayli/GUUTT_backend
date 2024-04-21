@@ -5,10 +5,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.sourceforge.tess4j.Tesseract
 import org.example.api.authorization.AuthorizationServiceImpl
-import org.example.api.authorization.GuuWebsiteAuthResult
 import org.example.api.authorization.GuuAuthServiceImpl
 import api.authorization.security.AesEncryption
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.example.api.authorization.AuthResult
 import org.example.authorization_feature.security.UserPasswordSecurity
@@ -16,14 +14,12 @@ import org.example.classes_feature.data.ClassObject
 import org.example.classes_feature.guutt.ClassesService
 import org.example.common.*
 import org.example.common.results.GuuResponse
-import org.example.tables.ClassesTable
+import api.tables.ClassesTable
 import org.example.tables.NewsTable
-import org.example.tables.UserDataTable
-import org.example.tables.UsersTable
+import api.tables.UsersTable
 import org.example.tables.response.DbResponse
 import org.example.tesseract.CaptchaServiceImpl
 import org.http4k.client.ApacheClient
-import org.http4k.core.Body
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
@@ -37,9 +33,7 @@ import org.http4k.routing.routes
 import org.http4k.server.Jetty
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.JoinType
 import java.util.concurrent.TimeUnit
-import javax.imageio.ImageIO
 
 suspend fun main() = coroutineScope {
 
@@ -57,7 +51,7 @@ suspend fun main() = coroutineScope {
         keyStorePassword = System.getenv("KS_PASS")
     )
     val guuAuthService = GuuAuthServiceImpl()
-    val authService = AuthorizationServiceImpl(guuAuthService, captchaService)
+    val authService = AuthorizationServiceImpl(guuAuthService, captchaService, aesEncryption)
     val classesService = ClassesService()
 
     val cachingService = CachingService(5000, 3L to TimeUnit.HOURS)
@@ -228,13 +222,16 @@ suspend fun main() = coroutineScope {
             }
         }*/
 
-        launchRepeatingTask(360) {
-//            val groupAndCookie = UserDataTable.join(otherTable = UsersTable, joinType = JoinType.INNER, onColumn = UsersTable.)
-            val (image, cookies) = guuAuthService.getCaptcha() ?: return@launchRepeatingTask
-            val captchaResult = async {
-                captchaService.solve(image)
-            }
-
-        }
+//        launchRepeatingTask(360) {
+//            val listOfUsersData = UserDataTable.selectAllWithCookies(aesEncryption)
+//            listOfUsersData?.forEach { (login, group, cookies) ->
+//                if (cookies == null) authService.
+//            }
+//            val (image, cookies) = guuAuthService.getCaptcha() ?: return@launchRepeatingTask
+//            val captchaResult = async {
+//                captchaService.solve(image)
+//            }
+//
+//        }
     }
 }

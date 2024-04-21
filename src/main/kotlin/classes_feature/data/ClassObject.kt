@@ -10,5 +10,6 @@ data class ClassObject(
     val color: String,
     val start: String,
     val end: String,
-    val description: ClassDescription
+    val description: ClassDescription,
+    val group: String? = null
 )

@@ -2,7 +2,7 @@ package org.example.classes_feature.guutt
 
 import org.example.classes_feature.data.ClassObject
 import org.example.currentSemester
-import org.example.tables.ClassesTable
+import api.tables.ClassesTable
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

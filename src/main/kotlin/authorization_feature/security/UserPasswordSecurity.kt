@@ -4,27 +4,26 @@ import api.authorization.security.AesEncryption
 import org.example.GuuWebsiteService
 import org.example.common.results.GuuResponse
 import org.example.logger
-import org.example.tables.UserDataTable
-import org.example.tables.UsersTable
-import org.example.tables.response.DbResponse
+import api.tables.UserDetailsTable
 
 class UserPasswordSecurity(private val aesEncryption: AesEncryption, private val guuWebsiteService: GuuWebsiteService) {
     fun saveSecuredPassword(login: String, password: String, cookies: String): Boolean {
         return try {
             val passBytes = aesEncryption.encryptData(login, password)
-            val encodedPass = aesEncryption.encode(passBytes)
+            val encodedPass = aesEncryption.encodeToBase64(passBytes)
 
             val cookiesBytes = aesEncryption.encryptData(login + "_cookies", cookies)
-            val encodedCookies = aesEncryption.encode(cookiesBytes)
+            val encodedCookies = aesEncryption.encodeToBase64(cookiesBytes)
 
-            when(UsersTable.insertData(login, encodedPass, encodedCookies)) {
-                is DbResponse.Success -> {
-                    true
-                }
-                is DbResponse.Error -> {
-                    false
-                }
-            }
+//            when(UsersTable.insertData(login, encodedPass, encodedCookies)) {
+//                is DbResponse.Success -> {
+//                    true
+//                }
+//                is DbResponse.Error -> {
+//                    false
+//                }
+//            }
+            false
         } catch (e: Exception) {
             logger.error(e.message)
             false
@@ -32,16 +31,10 @@ class UserPasswordSecurity(private val aesEncryption: AesEncryption, private val
     }
 
     fun getAndSaveUserInfo(login: String, cookies: String): String? {
-        return when(val userInfo = guuWebsiteService.getUserInfo(cookies)) {
+        return when(val userInfo = guuWebsiteService.getUserDetails(cookies)) {
             is GuuResponse.Success -> {
-                when(UserDataTable.insertData(login = login, userInfo = userInfo.data)) {
-                    is DbResponse.Success -> {
-                        userInfo.data.group
-                    }
-                    is DbResponse.Error -> {
-                        null
-                    }
-                }
+                val insertedCount = UserDetailsTable.insertOrUpdateUserDetails(login = login, userDetails = userInfo.data) ?: -1
+                if (insertedCount > 0) userInfo.data.group else null
             }
             is GuuResponse.NotResponding -> {
                 null

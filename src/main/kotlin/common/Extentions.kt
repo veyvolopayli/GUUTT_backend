@@ -3,6 +3,7 @@ package org.example.common
 import org.example.classes_feature.data.ClassObject
 import org.http4k.core.cookie.cookie
 import org.http4k.core.cookie.cookies
+import java.util.Base64
 
 fun org.http4k.core.Request.applyHeaders(contentType: String): org.http4k.core.Request {
     return this.header("Accept", Headers.ACCEPT_HEADER)
@@ -59,3 +60,5 @@ fun Map<String, List<ClassObject>>.fillDatesGaps(): Map<String, List<ClassObject
         it.key.toString() to it.value
     }.toMap()
 }
+
+fun ByteArray.encodeToBase64(): String = Base64.getEncoder().encodeToString(this)

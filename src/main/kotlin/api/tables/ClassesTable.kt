@@ -1,7 +1,8 @@
-package org.example.tables
+package api.tables
 
 import org.example.classes_feature.data.ClassDescription
 import org.example.classes_feature.data.ClassObject
+import org.example.logger
 import org.example.tables.response.DbResponse
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
@@ -129,7 +130,12 @@ object ClassesTable : Table("classes") {
         }
     }
 
-    fun updateClasses(group: String, semesterStart: LocalDate, semesterEnd: LocalDate, newClasses: List<ClassObject>): DbResponse<Unit> {
+    fun updateClasses(
+        group: String,
+        semesterStart: LocalDate,
+        semesterEnd: LocalDate,
+        newClasses: List<ClassObject>
+    ): DbResponse<Unit> {
         return try {
             transaction {
                 deleteWhere {
@@ -144,5 +150,54 @@ object ClassesTable : Table("classes") {
         } catch (e: Exception) {
             DbResponse.Error("${e.message}")
         }
+    }
+
+    fun getClassesOfAllGroupsForSemester(
+        semesterStart: LocalDate,
+        semesterEnd: LocalDate
+    ): Map<String, List<ClassObject>>? = try {
+        transaction {
+            selectAll().where {
+                startColumn.between(
+                    semesterStart.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
+                    semesterEnd.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
+                )
+            }.orderBy(startColumn).map { row ->
+                ClassObject(
+                    id = row[idColumn],
+                    title = row[titleColumn],
+                    color = row[colorColumn],
+                    start = row[startColumn],
+                    end = row[endColumn],
+                    description = ClassDescription(
+                        building = row[buildingColumn],
+                        classroom = row[classroomColumn],
+                        event = row[eventColumn],
+                        professor = row[professorColumn],
+                        department = row[departmentColumn]
+                    ),
+                    group = row[groupColumn]
+                )
+            }.groupBy { it.group!! } // Да, я уверен, что группа тут не может быть нуллом
+        }
+    } catch (e: Exception) {
+        logger.error(e.message)
+        null
+    }
+
+    fun getGroupsWithClassesCount(semesterStart: LocalDate, semesterEnd: LocalDate): Map<String, Long>? = try {
+        transaction {
+            select(groupColumn, startColumn.count()).where {
+                startColumn.between(
+                    semesterStart.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME),
+                    semesterEnd.atStartOfDay().format(DateTimeFormatter.ISO_DATE_TIME)
+                )
+            }.groupBy(groupColumn).associate { row ->
+                row[groupColumn] to row[startColumn.count()]
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(e.message)
+        null
     }
 }

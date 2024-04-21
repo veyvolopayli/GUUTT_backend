@@ -1,5 +1,6 @@
 package org.example
 
+import api.tables.UserDetails
 import kotlinx.serialization.json.Json
 import org.example.classes_feature.data.ClassDTO
 import org.example.classes_feature.data.ClassDescription
@@ -96,7 +97,7 @@ class GuuWebsiteServiceImpl(private val client: HttpHandler) : GuuWebsiteService
         }
     }
 
-    override fun getUserInfo(cookie: String): GuuResponse<UserInfo> {
+    override fun getUserDetails(cookie: String): GuuResponse<UserDetails> {
         val request = Request(Method.GET, GuuLinks.STUDENT)
             .applyHeaders("text/html; charset=UTF-8")
             .cookieString(cookie)
@@ -106,7 +107,7 @@ class GuuWebsiteServiceImpl(private val client: HttpHandler) : GuuWebsiteService
                 val doc = Jsoup.parse(response.bodyString())
                 val userFullName = doc.select("h3.widget-user-username").first()?.text() ?: ""
                 val userGroup = doc.select("h5.widget-user-desc").first()?.text() ?: ""
-                GuuResponse.Success(UserInfo(fullName = userFullName, group = userGroup))
+                GuuResponse.Success(UserDetails(fullName = userFullName, group = userGroup))
             }
             302 -> {
                 GuuResponse.CookieExpired()
