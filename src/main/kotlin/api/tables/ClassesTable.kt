@@ -2,6 +2,7 @@ package api.tables
 
 import org.example.classes_feature.data.ClassDescription
 import org.example.classes_feature.data.ClassObject
+import org.example.currentSemester
 import org.example.logger
 import org.example.tables.response.DbResponse
 import org.jetbrains.exposed.sql.*
@@ -60,6 +61,16 @@ object ClassesTable : Table("classes") {
             val classes = fetchClasses(group) ?: return null
             // Группировка по дате без времени. substringBefore('T'),
             // так как формат времени yyyy-MM-dd'T'HH:mm:ss навряд ли изменится
+            classes.groupBy { it.start.substringBefore('T') }
+        } catch (e: Exception) {
+            logger.error(e.stackTraceToString())
+            null
+        }
+    }
+
+    fun fetchGroupedClassesForPeriod(group: String, start: LocalDate, end: LocalDate): Map<String, List<ClassObject>>? {
+        return try {
+            val classes = fetchClassesForPeriod(group, start, end) ?: return null
             classes.groupBy { it.start.substringBefore('T') }
         } catch (e: Exception) {
             logger.error(e.stackTraceToString())

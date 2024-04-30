@@ -93,6 +93,20 @@ val authHandler: HttpHandler = { request ->
     }
 }
 
+val groupClassesForCurrentSemesterHandler: HttpHandler = { request ->
+    run {
+        val group = request.query("g") ?: return@run Response(BAD_REQUEST).body("Group required")
+        cachingService.getCache(group)?.let { classes ->
+            return@run Response(OK).body(Json.encodeToString(classes as Map<String, List<ClassObject>>))
+        }
+        val (start, end) = currentSemester() ?: return@run Response(BAD_REQUEST).body("Сейчас не учебное время")
+        val classesFromDb = ClassesTable.fetchGroupedClassesForPeriod(
+                group, start, end)?.fillDatesGaps() ?: return@run Response(INTERNAL_SERVER_ERROR)
+        cachingService.putCache(group, classesFromDb)
+        return@run Response(OK).body(Json.encodeToString(classesFromDb))
+    }
+}
+
 suspend fun main() = coroutineScope mainCoroutineScope@ {
 
     Database.connect(
@@ -101,22 +115,7 @@ suspend fun main() = coroutineScope mainCoroutineScope@ {
     )
 
     val api = routes(
-        "classes" bind Method.GET to { r: Request ->
-            r.query("g")?.let { group ->
-                val cachedClasses = cachingService.getCache(group) as? Map<String, List<ClassObject>>
-                if (cachedClasses == null) {
-                    val dbClasses = ClassesTable.fetchGroupedClasses(group)
-                        ?: return@let Response(INTERNAL_SERVER_ERROR).body("Внутренняя ошибка сервера.")
-                    val resultClasses = dbClasses.fillDatesGaps()
-                    if (resultClasses.isNotEmpty()) {
-                        cachingService.putCache(group.trim(), resultClasses)
-                    }
-                    Response(OK).body(Json.encodeToString(resultClasses)).specifyContentType()
-                } else {
-                    Response(OK).body(Json.encodeToString(cachedClasses)).specifyContentType()
-                }
-            } ?: Response(BAD_REQUEST).body("Group required")
-        },
+        "classes" bind Method.GET to groupClassesForCurrentSemesterHandler,
         "groups" bind Method.GET to {
             when (val savedGroups = ClassesTable.getSavedGroups()) {
                 is DbResponse.Success -> {
