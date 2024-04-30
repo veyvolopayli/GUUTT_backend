@@ -1,3 +1,6 @@
 package org.example.common
 
-fun getCookiesKeyForKeystore(login: String) = login + "_cookies"
+/**
+ * Возвращает строку login + "_cookies".
+ */
+fun prefixForLoginCookies(login: String) = login + "_cookies"

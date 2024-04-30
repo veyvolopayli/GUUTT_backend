@@ -1,29 +1,53 @@
 package org.example.classes_feature.guutt
 
-import org.example.classes_feature.data.ClassObject
-import org.example.currentSemester
 import api.tables.ClassesTable
+import kotlinx.coroutines.coroutineScope
+import org.example.GuuWebsiteService
+import org.example.classes_feature.data.ClassObject
+import org.example.common.results.GuuResponse
+import org.example.currentSemester
+import org.example.logger
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class ClassesService {
-    fun updateScheduleOrNothing(group: String, guuWebsiteClasses: List<ClassObject>) {
-        val (semesterStart, semesterEnd) = currentSemester() ?: return
+class ClassesService(private val guuWebsiteService: GuuWebsiteService) {
+
+    /**
+     * Использовать только внутри [transaction]
+     */
+    fun fetchAndInsertOrUpdateClasses(group: String, cookies: String): List<ClassObject>? {
+        val (semesterStart, semesterEnd) = currentSemester() ?: return null
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
 
-        // For some reason, the schedule on the site contains old classes from 2021, so they need to be removed
-        val actualClasses = guuWebsiteClasses.dropWhile {
-            val classDate = LocalDate.parse(it.start, formatter)
-            classDate < semesterStart
-        }
+        when(val guuWebsiteClassesResult = guuWebsiteService.fetchClasses(cookies)) {
+            is GuuResponse.Success -> {
+                val guuWebsiteClasses = guuWebsiteClassesResult.data ?: return null
+                // For some reason, the schedule on the site contains old classes from 2021, so they need to be removed
+                val websiteActualClasses = guuWebsiteClasses.sortedBy {
+                    LocalDateTime.parse(it.start, formatter)
+                }.dropWhile {
+                    val classDate = LocalDate.parse(it.start, formatter)
+                    classDate < semesterStart
+                }.dropLastWhile {
+                    val classDate = LocalDate.parse(it.start, formatter)
+                    classDate > semesterEnd
+                }
 
-        // if schedule is broken we will return
-        if (actualClasses.size < 24) return
-        val classesFromDb: List<ClassObject>? = ClassesTable.fetchClassesForPeriod(group, semesterStart, semesterEnd)
+                // if schedule is broken we will return
+                if (websiteActualClasses.size < 24) return null
+                val classesFromDb: List<ClassObject> = ClassesTable.fetchClassesForPeriod(group, semesterStart, semesterEnd) ?: return null
 
-        if (actualClasses != classesFromDb) {
-            // Update classes
-            ClassesTable.updateClasses(group, semesterStart, semesterEnd, actualClasses)
+                if (websiteActualClasses != classesFromDb) {
+                    // Update classes
+                    logger.info("Schedule updated for group: $group")
+                    return ClassesTable.updateClasses(group = group, oldClasses = classesFromDb, newClasses = websiteActualClasses)
+                }
+                return classesFromDb
+            }
+            else -> {
+                return null
+            }
         }
     }
 }

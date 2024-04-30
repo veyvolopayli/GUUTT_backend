@@ -49,6 +49,14 @@ tasks.withType<ShadowJar> {
     }
 }
 
+tasks.jar {
+    manifest {
+        attributes(
+            "Main-Class" to "org.example.MainKt"
+        )
+    }
+}
+
 ant.withGroovyBuilder {
     "taskdef"(
         "name" to "scp",

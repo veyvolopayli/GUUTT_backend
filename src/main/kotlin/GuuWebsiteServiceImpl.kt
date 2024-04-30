@@ -16,33 +16,26 @@ import org.http4k.core.Method
 import org.http4k.core.Request
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 class GuuWebsiteServiceImpl(private val client: HttpHandler) : GuuWebsiteService {
-    override fun fetchGroup(cookie: String): String? {
-        val request = Request(method = Method.GET, uri = GuuLinks.STUDENT)
-            .applyHeaders(cookie)
-        val response = client(request)
-        val group = parseGroup(response.body.toString())
-        return group
-    }
 
-    override fun fetchClasses(cookie: String): GuuResponse<List<ClassObject>> {
+    /**
+     * @return Неотсортированный список занятий с my.guu.ru
+     */
+    override fun fetchClasses(cookies: String): GuuResponse<List<ClassObject>?> {
         val request = Request(method = Method.GET, uri = GuuLinks.CLASSES)
             .applyHeaders("text/html; charset=UTF-8")
-            .cookieString(cookie)
+            .cookieString(cookies)
         // if response code 302 - cookies isn't valid, else if 200 - all is good
         val response = client(request)
         return when(response.status.code) {
             200 -> {
                 val classes = parseClasses(response.bodyString())
-                val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-                val sortedClasses = classes.sortedBy {
-                    LocalDateTime.parse(it.start, dateTimeFormat)
-                }
-                GuuResponse.Success(sortedClasses)
-                // all is ok
+                GuuResponse.Success(classes)
+//                val dateTimeFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+//                val sortedClasses = classes.sortedBy {
+//                    LocalDateTime.parse(it.start, dateTimeFormat)
+//                }
             }
             403 -> {
                 GuuResponse.Forbidden()
@@ -74,33 +67,10 @@ class GuuWebsiteServiceImpl(private val client: HttpHandler) : GuuWebsiteService
         }
     }
 
-    override fun fetchFullName(cookie: String): GuuResponse<String> {
-        val request = Request(method = Method.GET, uri = GuuLinks.STUDENT)
-            .applyHeaders("text/html; charset=UTF-8")
-            .cookieString(cookie)
-        val response = ApacheClient().invoke(request)
-        return when(response.status.code) {
-            200 -> {
-                val doc = Jsoup.parse(response.bodyString())
-                val userFullName = doc.select("h3.widget-user-username").first()?.text() ?: ""
-                GuuResponse.Success(userFullName)
-            }
-            302 -> {
-                GuuResponse.CookieExpired()
-            }
-            403 -> {
-                GuuResponse.Forbidden()
-            }
-            else -> {
-                GuuResponse.NotResponding("${response.status.code} ${response.status.description}")
-            }
-        }
-    }
-
-    override fun getUserDetails(cookie: String): GuuResponse<UserDetails> {
+    override fun fetchUserDetails(cookies: String): GuuResponse<UserDetails> {
         val request = Request(Method.GET, GuuLinks.STUDENT)
             .applyHeaders("text/html; charset=UTF-8")
-            .cookieString(cookie)
+            .cookieString(cookies)
         val response = ApacheClient().invoke(request)
         return when(response.status.code) {
             200 -> {
@@ -138,39 +108,26 @@ class GuuWebsiteServiceImpl(private val client: HttpHandler) : GuuWebsiteService
         return news
     }
 
-    private fun parseGroup(studentPage: String): String? {
-        val document = Jsoup.parse(studentPage)
-        val group = document.select("h5.widget-user-desc").first()?.text()
-        return group
-    }
-
-    private fun parseClasses(classesPage: String): List<ClassObject> {
+    private fun parseClasses(classesPage: String): List<ClassObject>? {
         val document = Jsoup.parse(classesPage)
-        val scriptElements = document.select("script")
+        val scripts = document.select("script")
 
-        for (script in scriptElements) {
-            val scriptContent: String = script.data()
+        val jsScriptWithCalendar = scripts.find { it.data().contains("fullCalendar") }?.data() ?: return null
 
-            if (scriptContent.contains("fullCalendar")) {
-                val startIndex = scriptContent.indexOf("events : ") + "events : ".length
-                val endIndex = scriptContent.indexOfLast { it == ']' } + 1
-                val eventsJsonArray = scriptContent.substring(startIndex, endIndex)
+        val startIndex = jsScriptWithCalendar.indexOf("events : ") + 9
+        val endIndex = jsScriptWithCalendar.indexOfLast { it == ']' } + 1
+        val eventsJsonString = jsScriptWithCalendar.substring(startIndex, endIndex)
 
-                val json = Json { ignoreUnknownKeys = true }
+        val json = Json { ignoreUnknownKeys = true }
+        val classDTOs = json.decodeFromString<List<ClassDTO>>(eventsJsonString)
 
-                val classDTOs = json.decodeFromString<List<ClassDTO>>(eventsJsonArray)
-
-                return classDTOs.map {
-                    val classDescription = parseClassDescription(it.description)
-                    it.toClassObject(classDescription)
-                }
-            }
+        return classDTOs.map {
+            val classDescription = parseClassDescription(it.description)
+            it.toClassObject(classDescription)
         }
-        return emptyList()
     }
 
     private fun parseClassDescription(htmlDescription: String): ClassDescription {
-
         val sDescription = htmlDescription.split("<br>")
         val map = mutableMapOf<String, String>()
         sDescription.forEach {

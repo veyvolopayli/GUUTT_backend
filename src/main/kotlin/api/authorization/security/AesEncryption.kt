@@ -1,5 +1,6 @@
 package api.authorization.security
 
+import org.example.logger
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -41,7 +42,12 @@ open class AesEncryption(private val keyStorePath: String, keyStorePassword: Str
     fun decryptData(uniqueKey: String, encryptedData: String): String? {
         val key = getSecretKey(uniqueKey) ?: return null
         cipher.init(Cipher.DECRYPT_MODE, key)
-        val dataBytes = try { decodeFromBase64(encryptedData) } catch (e: Exception) { return null }
+        val dataBytes = try {
+            decodeFromBase64(encryptedData)
+        } catch (e: Exception) {
+            logger.error(e.stackTraceToString())
+            return null
+        }
         return String(cipher.doFinal(dataBytes))
     }
 
@@ -61,23 +67,3 @@ open class AesEncryption(private val keyStorePath: String, keyStorePassword: Str
     @Throws(IllegalArgumentException::class)
     fun decodeFromBase64(data: String): ByteArray = Base64.getDecoder().decode(data)
 }
-
-//fun main() {
-//    try {
-//        val aesEncryption = AesEncryption("keystore.jks", "somePassword")
-//        val passFromDb = "sKqcblsWRHlbhxfbQ75g4A=="
-//        val decodedPass = aesEncryption.decode(passFromDb)
-//
-//        println(aesEncryption.decryptPassword("user1", decodedPass))
-//    } catch (e: InvalidKeyException) {
-//        // No SecretKey stored with this alias
-//        e.printStackTrace()
-//    } catch (e: BadPaddingException) {
-//        // Secret key is not correct for this encrypted password
-//        e.printStackTrace()
-//    } catch (e: Exception) {
-//        e.printStackTrace()
-//    }
-//
-//
-//}

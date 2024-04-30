@@ -23,12 +23,19 @@ fun org.http4k.core.Response.cookiesString(): String {
     }
 }
 
+/**
+ * Превращает список Cookie в строковое представление.
+ * "cookie_key_1=value;cookie_key_2=value;cookie_key_3=value"
+ */
 fun List<org.http4k.core.cookie.Cookie>.stringify(): String {
     return joinToString(";") {
         "${it.name}=${it.value}"
     }
 }
 
+/**
+ * Устанавливает Json Content Type для ответа
+ */
 fun org.http4k.core.Response.specifyContentType(): org.http4k.core.Response {
     return this.header("Content-Type", "application/json; charset=utf-8")
 }
@@ -39,6 +46,9 @@ fun org.http4k.core.Request.applyAuthCookies(cookies: List<org.http4k.core.cooki
     }
 }
 
+/**
+ * Заполняет пустыми списками пробелы между учебными днями. Нужно для удобства отображения на клиентской части.
+ */
 fun Map<String, List<ClassObject>>.fillDatesGaps(): Map<String, List<ClassObject>> {
     val startDate = this.keys.first()
     val endDate = this.keys.last()
