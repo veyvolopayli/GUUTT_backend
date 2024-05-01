@@ -97,13 +97,13 @@ val groupClassesForCurrentSemesterHandler: HttpHandler = { request ->
     run {
         val group = request.query("g") ?: return@run Response(BAD_REQUEST).body("Group required")
         cachingService.getCache(group)?.let { classes ->
-            return@run Response(OK).body(Json.encodeToString(classes as Map<String, List<ClassObject>>))
+            return@run Response(OK).body(Json.encodeToString(classes as Map<String, List<ClassObject>>)).specifyContentType()
         }
         val (start, end) = currentSemester() ?: return@run Response(BAD_REQUEST).body("Сейчас не учебное время")
         val classesFromDb = ClassesTable.fetchGroupedClassesForPeriod(
                 group, start, end)?.fillDatesGaps() ?: return@run Response(INTERNAL_SERVER_ERROR)
         cachingService.putCache(group, classesFromDb)
-        return@run Response(OK).body(Json.encodeToString(classesFromDb))
+        return@run Response(OK).body(Json.encodeToString(classesFromDb)).specifyContentType()
     }
 }
 
