@@ -78,7 +78,7 @@ val authHandler: HttpHandler = { request ->
 
         when(authResult) {
             is AuthResult.Success -> {
-                Response(OK).body("Авторизация выполнена успешно.")
+                Response(OK).body(authResult.group)
             }
             is AuthResult.ServerError -> {
                 Response(INTERNAL_SERVER_ERROR).body("Возникла ошибка на одном из этапов авторизации, повторите попытку позже.")
@@ -132,7 +132,7 @@ suspend fun main() = coroutineScope mainCoroutineScope@ {
         "news" bind Method.GET to { _: Request ->
             when (val newsResponse = NewsTable.fetchAllNews()) {
                 is DbResponse.Success -> {
-                    Response(OK).body(Json.encodeToString(newsResponse.data)).specifyContentType()
+                    Response(OK).body(Json.encodeToString(newsResponse.data.reversed())).specifyContentType()
                 }
 
                 is DbResponse.Error -> {

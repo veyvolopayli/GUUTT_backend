@@ -64,7 +64,7 @@ class AuthorizationServiceImpl(
                             rollback()
                             return@coroutineScope AuthResult.ServerError
                         }
-                        return@coroutineScope AuthResult.Success(cookies = authResult.cookies, savedUserGroup)
+                        return@coroutineScope AuthResult.Success(cookies = authResult.cookies, group = savedUserGroup)
                     }
 //                    val authCookies = authResult.cookies.stringify()
 //                    val isAuthDataSaved = if (alreadyRegistered) {
