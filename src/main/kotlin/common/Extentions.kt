@@ -1,6 +1,6 @@
-package org.example.common
+package org.guutt.common
 
-import org.example.classes_feature.data.ClassObject
+import org.guutt.classes_feature.data.ClassObject
 import org.http4k.core.cookie.cookie
 import org.http4k.core.cookie.cookies
 import java.util.Base64

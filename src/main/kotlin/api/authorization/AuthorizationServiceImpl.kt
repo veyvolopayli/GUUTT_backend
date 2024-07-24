@@ -1,17 +1,17 @@
-package org.example.api.authorization
+package org.guutt.api.authorization
 
 import api.authorization.security.AesEncryption
 import api.tables.UserDetailsTable
 import kotlinx.coroutines.*
-import org.example.common.prefixForLoginCookies
-import org.example.common.stringify
-import org.example.logger
+import org.guutt.common.prefixForLoginCookies
+import org.guutt.common.stringify
+import org.guutt.logger
 import api.tables.UsersTable
-import org.example.GuuWebsiteService
-import org.example.classes_feature.guutt.ClassesService
-import org.example.common.encodeToBase64
-import org.example.common.results.GuuResponse
-import org.example.tesseract.CaptchaService
+import org.guutt.GuuWebsiteService
+import org.guutt.classes_feature.guutt.ClassesService
+import org.guutt.common.encodeToBase64
+import org.guutt.common.results.GuuResponse
+import org.guutt.tesseract.CaptchaService
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.util.concurrent.atomic.AtomicInteger
 

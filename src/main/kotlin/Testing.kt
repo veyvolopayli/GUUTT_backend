@@ -1,13 +1,8 @@
-package org.example
+package org.guutt
 
-import api.tables.ClassesTable
-import api.tables.UserDetails
-import api.tables.UserDetailsTable
-import api.tables.UsersTable
 import kotlinx.coroutines.coroutineScope
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.DatabaseConfig
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 class Testing {
 

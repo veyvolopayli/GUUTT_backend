@@ -1,4 +1,4 @@
-package org.example.tables
+package org.guutt.tables
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction

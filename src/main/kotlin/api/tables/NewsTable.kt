@@ -1,8 +1,8 @@
-package org.example.tables
+package org.guutt.tables
 
-import org.example.tables.response.DbResponse
-import org.example.News
-import org.example.NewsDetailed
+import org.guutt.tables.response.DbResponse
+import org.guutt.News
+import org.guutt.NewsDetailed
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.transactions.transaction

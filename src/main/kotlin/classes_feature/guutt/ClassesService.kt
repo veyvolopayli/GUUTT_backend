@@ -1,12 +1,11 @@
-package org.example.classes_feature.guutt
+package org.guutt.classes_feature.guutt
 
 import api.tables.ClassesTable
-import kotlinx.coroutines.coroutineScope
-import org.example.GuuWebsiteService
-import org.example.classes_feature.data.ClassObject
-import org.example.common.results.GuuResponse
-import org.example.currentSemester
-import org.example.logger
+import org.guutt.GuuWebsiteService
+import org.guutt.classes_feature.data.ClassObject
+import org.guutt.common.results.GuuResponse
+import org.guutt.currentSemester
+import org.guutt.logger
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

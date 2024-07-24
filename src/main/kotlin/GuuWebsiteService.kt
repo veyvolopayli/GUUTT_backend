@@ -1,8 +1,8 @@
-package org.example
+package org.guutt
 
 import api.tables.UserDetails
-import org.example.classes_feature.data.ClassObject
-import org.example.common.results.GuuResponse
+import org.guutt.classes_feature.data.ClassObject
+import org.guutt.common.results.GuuResponse
 
 interface GuuWebsiteService {
     fun fetchClasses(cookies: String): GuuResponse<List<ClassObject>?>

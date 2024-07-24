@@ -1,14 +1,11 @@
-package org.example.api.authorization
+package org.guutt.api.authorization
 
 import api.authorization.model.SimpleAuthDto
 import api.authorization.model.SiteLogin
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.example.common.*
-import org.example.logger
+import org.guutt.common.*
+import org.guutt.logger
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request

@@ -1,4 +1,4 @@
-package org.example.classes_feature.data
+package org.guutt.classes_feature.data
 
 import kotlinx.serialization.Serializable
 

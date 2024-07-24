@@ -1,4 +1,4 @@
-package org.example.tables.response
+package org.guutt.tables.response
 
 sealed class DbResponse<T> {
     class Success<T>(val data: T): DbResponse<T>()

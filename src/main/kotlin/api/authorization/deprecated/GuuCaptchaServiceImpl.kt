@@ -1,6 +1,6 @@
-package org.example.api.authorization.deprecated
+package org.guutt.api.authorization.deprecated
 
-import org.example.common.captchaTempStorageDir
+import org.guutt.common.captchaTempStorageDir
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader

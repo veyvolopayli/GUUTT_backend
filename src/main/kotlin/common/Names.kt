@@ -1,4 +1,4 @@
-package org.example.common
+package org.guutt.common
 
 /**
  * Возвращает строку login + "_cookies".

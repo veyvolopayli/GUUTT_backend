@@ -1,4 +1,4 @@
-package org.example.classes_feature.guu
+package org.guutt.classes_feature.guu
 
 interface GuuExcelFiles {
     fun downloadFiles(): Map<Int, ByteArray>

@@ -1,8 +1,6 @@
-package org.example.classes_feature.guu
+package org.guutt.classes_feature.guu
 
 import java.io.File
-import java.nio.charset.StandardCharsets
-import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.Base64
 

@@ -1,4 +1,4 @@
-package org.example.tesseract
+package org.guutt.tesseract
 
 import net.sourceforge.tess4j.Tesseract
 import net.sourceforge.tess4j.TesseractException

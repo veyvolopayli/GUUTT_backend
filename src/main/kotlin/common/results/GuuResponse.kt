@@ -1,4 +1,4 @@
-package org.example.common.results
+package org.guutt.common.results
 
 sealed class GuuResponse<T> {
     class Success<T>(val data: T): GuuResponse<T>()

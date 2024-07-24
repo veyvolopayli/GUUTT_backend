@@ -1,4 +1,4 @@
-package org.example
+package org.guutt
 
 data class UserInfo(
     val fullName: String,

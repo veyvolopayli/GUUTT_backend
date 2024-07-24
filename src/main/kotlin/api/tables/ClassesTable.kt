@@ -1,13 +1,10 @@
 package api.tables
 
-import org.example.classes_feature.data.ClassDescription
-import org.example.classes_feature.data.ClassObject
-import org.example.currentSemester
-import org.example.logger
-import org.example.tables.response.DbResponse
+import org.guutt.classes_feature.data.ClassDescription
+import org.guutt.classes_feature.data.ClassObject
+import org.guutt.logger
+import org.guutt.tables.response.DbResponse
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDate

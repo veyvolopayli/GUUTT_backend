@@ -1,4 +1,4 @@
-package org.example.tesseract
+package org.guutt.tesseract
 
 import java.awt.image.BufferedImage
 import java.io.File

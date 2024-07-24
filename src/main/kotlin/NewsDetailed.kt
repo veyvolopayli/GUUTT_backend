@@ -1,4 +1,4 @@
-package org.example
+package org.guutt
 
 import kotlinx.serialization.Serializable
 

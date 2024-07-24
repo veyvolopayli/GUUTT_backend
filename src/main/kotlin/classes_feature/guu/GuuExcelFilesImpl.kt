@@ -1,7 +1,7 @@
-package org.example.classes_feature.guu
+package org.guutt.classes_feature.guu
 
-import org.example.common.applyHeaders
-import org.example.tables.BachelorExcelsTable
+import org.guutt.common.applyHeaders
+import org.guutt.tables.BachelorExcelsTable
 import org.http4k.client.ApacheClient
 import org.http4k.core.Method
 import org.http4k.core.Request

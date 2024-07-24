@@ -1,4 +1,4 @@
-package org.example
+package org.guutt
 
 import api.authorization.security.AesEncryption
 import api.tables.ClassesTable
@@ -10,19 +10,18 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.sourceforge.tess4j.Tesseract
-import org.example.api.authorization.AuthResult
-import org.example.api.authorization.AuthorizationServiceImpl
-import org.example.api.authorization.GuuAuthServiceImpl
-import org.example.authorization_feature.security.UserPasswordSecurity
-import org.example.classes_feature.data.ClassObject
-import org.example.classes_feature.guutt.ClassesService
-import org.example.common.fillDatesGaps
-import org.example.common.isProd
-import org.example.common.specifyContentType
-import org.example.common.tessdataDir
-import org.example.tables.NewsTable
-import org.example.tables.response.DbResponse
-import org.example.tesseract.CaptchaServiceImpl
+import org.guutt.api.authorization.AuthResult
+import org.guutt.api.authorization.AuthorizationServiceImpl
+import org.guutt.api.authorization.GuuAuthServiceImpl
+import org.guutt.classes_feature.data.ClassObject
+import org.guutt.classes_feature.guutt.ClassesService
+import org.guutt.common.fillDatesGaps
+import org.guutt.common.isProd
+import org.guutt.common.specifyContentType
+import org.guutt.common.tessdataDir
+import org.guutt.tables.NewsTable
+import org.guutt.tables.response.DbResponse
+import org.guutt.tesseract.CaptchaServiceImpl
 import org.http4k.client.ApacheClient
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method

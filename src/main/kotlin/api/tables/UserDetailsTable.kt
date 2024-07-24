@@ -1,8 +1,8 @@
 package api.tables
 
 import api.authorization.security.AesEncryption
-import org.example.common.prefixForLoginCookies
-import org.example.logger
+import org.guutt.common.prefixForLoginCookies
+import org.guutt.logger
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 

@@ -1,4 +1,4 @@
-package org.example.api.authorization
+package org.guutt.api.authorization
 
 import org.http4k.core.Response
 

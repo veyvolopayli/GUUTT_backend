@@ -1,4 +1,4 @@
-package org.example.common
+package org.guutt.common
 
 object GuuLinks {
     const val CAPTCHA = "https://my.guu.ru/site/captcha"
